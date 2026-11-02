@@ -74,6 +74,21 @@ ol.dish li:first-child{font-weight:600;font-size:1.08rem}
 ol.dish li.side{background:transparent;padding:2px 12px;color:var(--muted)}
 .snack{margin:14px 0 0;font-size:.88rem;color:var(--muted);border-top:1px dashed var(--line);padding-top:12px}
 .note{margin:12px 0 0;font-size:.85rem;padding:10px 12px;border-radius:12px;border:1px solid var(--sun)}
+/* agenda */
+.ag-day{display:flex;flex-direction:column}
+.ag-day + .ag-day{margin-top:14px}
+.ag-head{font:700 1.05rem/1.2 var(--display);margin:0 0 6px;display:flex;gap:8px;align-items:baseline}
+.ag-head small{font:500 .85rem var(--body);color:var(--muted)}
+.ag-ev{display:grid;grid-template-columns:4.6rem 1fr;gap:10px;padding:9px 0;border-top:1px solid var(--line);align-items:baseline}
+.ag-ev .tm{font-weight:600;font-size:.95rem}
+.ag-ev .tm span{display:block;white-space:nowrap;font-weight:400;font-size:.8rem;color:var(--muted)}
+.ag-ev .tm.all{font-size:.8rem;color:var(--sky);text-transform:uppercase;letter-spacing:.04em}
+.ag-ev .ti{min-width:0}
+.ag-ev .ti strong{font-weight:600;display:block}
+.ag-ev .ti span{color:var(--muted);font-size:.88rem}
+.ag-ev.past{opacity:.45}
+.ag-ev.now .tm{color:var(--sky)}
+.ag-empty{color:var(--muted);font-size:.92rem;padding:9px 0;border-top:1px solid var(--line);margin:0}
 /* scout */
 .next{display:flex;gap:14px;align-items:stretch}
 .cal{flex:none;width:64px;border-radius:14px;background:var(--sky);color:var(--card);text-align:center;padding:8px 4px;display:flex;flex-direction:column;justify-content:center}
@@ -118,6 +133,11 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
   <section aria-labelledby="w-h">
     <h2 class="eyebrow" id="w-h"><span>Meteo</span><span id="w-upd" class="num"></span></h2>
     <div id="weather"><p class="status">Carico le previsioni…</p></div>
+  </section>
+
+  <section aria-labelledby="a-h" id="agenda-box" hidden>
+    <h2 class="eyebrow" id="a-h"><span>Agenda di famiglia</span><span id="a-upd" class="num"></span></h2>
+    <div id="agenda"><p class="status">Carico gli appuntamenti…</p></div>
   </section>
 
   <section aria-labelledby="m-h">
@@ -453,12 +473,76 @@ async function loadScout(){
 }
 loadScout();
 
+// ---------- agenda di famiglia (calendario iCloud tramite il Worker Cloudflare) ----------
+// L'indirizzo del Worker è pubblico; la chiave no: arriva dal link salvato sui telefoni (…/oggi/?k=CHIAVE)
+const AGENDA_URL = "";   // es. "https://agenda-casa.tuonome.workers.dev"
+const AGENDA_DAYS = 7;
+let agendaKey = new URLSearchParams(location.search).get("k");
+try {
+  if (agendaKey) localStorage.setItem("agendaKey", agendaKey);
+  else agendaKey = localStorage.getItem("agendaKey");
+} catch(_) {}
+
+function renderAgenda(data, cached){
+  const box = document.getElementById("agenda");
+  const byDay = {};
+  data.events.forEach(e => (byDay[e.date] = byDay[e.date] || []).push(e));
+  const now = new Date();
+  const nowHM = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+  let html = "";
+  for (let i = 0; i < AGENDA_DAYS; i++) {
+    const d = addDays(today, i), key = isoKey(d), list = byDay[key] || [];
+    if (i > 1 && !list.length) continue;            // oggi e domani sempre, gli altri giorni solo se c'è qualcosa
+    const name = i === 0 ? "Oggi" : i === 1 ? "Domani" : DAYS_LONG[d.getDay()];
+    const fade = Math.max(0.45, 1 - Math.max(0, i - 1) * 0.1).toFixed(2);
+    html += `<div class="ag-day" style="opacity:${fade}"><h3 class="ag-head">${name} <small>${d.getDate()} ${MONTHS[d.getMonth()]}</small></h3>`;
+    if (!list.length) html += `<p class="ag-empty">Niente in agenda</p>`;
+    list.forEach(e => {
+      let cls = "ag-ev";
+      if (i === 0 && !e.allDay) {
+        if (e.end && e.end <= nowHM && !e.endDate) cls += " past";
+        else if (e.start <= nowHM) cls += " now";
+      }
+      const tm = e.allDay
+        ? `<div class="tm all">${e.part ? "giorno " + e.part : "giornata"}</div>`
+        : `<div class="tm num">${e.start}${e.end ? `<span>→ ${e.end}</span>` : ""}</div>`;
+      html += `<div class="${cls}">${tm}<div class="ti"><strong>${esc(e.title)}</strong>${e.location ? `<span>${esc(e.location)}</span>` : ""}</div></div>`;
+    });
+    html += `</div>`;
+  }
+  if (cached) html += `<p class="status">Senza connessione: mostro gli ultimi appuntamenti salvati.</p>`;
+  box.innerHTML = html;
+  document.getElementById("a-upd").textContent = "agg. " + new Date(data.generated).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
+}
+
+async function loadAgenda(){
+  if (!AGENDA_URL || !agendaKey) return;            // senza chiave la sezione resta nascosta
+  document.getElementById("agenda-box").hidden = false;
+  try {
+    const res = await fetch(`${AGENDA_URL}/?days=${AGENDA_DAYS}&k=${encodeURIComponent(agendaKey)}`);
+    if (res.status === 401) {
+      document.getElementById("agenda").innerHTML = `<p class="err">La chiave nel link non è giusta. Riapri il link completo che contiene ?k=…</p>`;
+      return;
+    }
+    if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    try { localStorage.setItem("agenda", JSON.stringify(data)); } catch(_){}
+    renderAgenda(data, false);
+  } catch(e) {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem("agenda")); } catch(_){}
+    if (saved) renderAgenda(saved, true);
+    else document.getElementById("agenda").innerHTML = `<p class="err">Non riesco a leggere il calendario. Riprova tra poco.</p>`;
+  }
+}
+loadAgenda();
+
 // aggiorna ogni 30 minuti e quando si riapre la pagina
-setInterval(() => { loadWeather(); loadScout(); }, 30 * 60 * 1000);
+setInterval(() => { loadWeather(); loadScout(); loadAgenda(); }, 30 * 60 * 1000);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") {
     if (startOfDay(new Date()).getTime() !== today.getTime()) location.reload();
-    else { loadWeather(); loadScout(); }
+    else { loadWeather(); loadScout(); loadAgenda(); }
   }
 });
 </script>
