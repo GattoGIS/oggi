@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Oggi">
+<meta name="theme-color" content="#eef2f6">
+<title>Oggi a casa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Layout: una colonna stretta da telefono — data, scheda meteo, scheda menù */
+:root{
+  --bg:#eef2f6; --card:#ffffff; --fg:#17212b; --muted:#5c6b7a; --line:#d9e1e9;
+  --sky:#2f6fb0; --sky-soft:#e1ecf7; --leaf:#3d7a4a; --leaf-soft:#e3f0e4; --sun:#e0a21b;
+  --display:"Bricolage Grotesque",ui-rounded,system-ui,sans-serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#10161d; --card:#18212b; --fg:#e8eef4; --muted:#93a3b3; --line:#2a3644;
+  --sky:#7fb3e6; --sky-soft:#1d2d3e; --leaf:#8cc797; --leaf-soft:#1c2c21; --sun:#f0c04f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10161d; --card:#18212b; --fg:#e8eef4; --muted:#93a3b3; --line:#2a3644;
+  --sky:#7fb3e6; --sky-soft:#1d2d3e; --leaf:#8cc797; --leaf-soft:#1c2c21; --sun:#f0c04f; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 var(--body);-webkit-font-smoothing:antialiased}
+main{max-width:520px;margin:0 auto;padding-block:20px 40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:16px}
+header h1{font:700 2rem/1.1 var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+header p{margin:4px 0 0;color:var(--muted)}
+section{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px}
+.eyebrow{font:600 .72rem/1 var(--body);text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 12px;display:flex;justify-content:space-between;gap:8px}
+.num{font-variant-numeric:tabular-nums}
+
+/* meteo */
+.now{display:flex;align-items:center;gap:14px}
+.now .temp{font:700 3.6rem/1 var(--display);letter-spacing:-.03em}
+.now svg{width:58px;height:58px;flex:none}
+.now .desc{min-width:0}
+.now .desc strong{display:block;font:600 1.15rem/1.2 var(--body)}
+.now .desc span{color:var(--muted);font-size:.92rem}
+.facts{display:flex;flex-wrap:wrap;gap:6px 14px;margin:14px 0 0;padding:10px 12px;background:var(--sky-soft);border-radius:12px;font-size:.9rem}
+.facts b{font-weight:600}
+.days{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:14px}
+.day{text-align:center;padding:8px 2px;border-radius:12px}
+.day:first-child{background:var(--sky-soft)}
+.day .d{font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.day svg{width:30px;height:30px;margin:4px auto;display:block}
+.day .t{font-size:.9rem}
+.day .t span{color:var(--muted)}
+.day .r{font-size:.75rem;color:var(--sky);font-weight:600}
+.status{font-size:.8rem;color:var(--muted);margin:12px 0 0}
+.err{color:var(--fg);background:var(--sky-soft);padding:10px 12px;border-radius:12px;font-size:.9rem}
+
+/* menù */
+.picker{display:flex;align-items:center;gap:6px}
+.picker button{flex:none;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--fg);font:600 1.1rem/1 var(--body);cursor:pointer}
+.picker button:focus-visible,.tabs button:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
+.tabs{flex:1;display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.tabs button{border:0;background:transparent;color:var(--muted);font:600 .85rem/1 var(--body);padding:9px 0;border-radius:10px;cursor:pointer}
+.tabs button.today{color:var(--leaf)}
+.tabs button[aria-pressed="true"]{background:var(--leaf);color:var(--card)}
+.when{margin:14px 0 2px;font:700 1.25rem/1.2 var(--display)}
+.week{display:inline-block;margin-left:6px;font:600 .72rem/1 var(--body);padding:4px 8px;border-radius:99px;background:var(--leaf-soft);color:var(--leaf);vertical-align:3px;letter-spacing:.04em}
+ol.dish{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+ol.dish li{padding:10px 12px;border-radius:12px;background:var(--leaf-soft)}
+ol.dish li:first-child{font-weight:600;font-size:1.08rem}
+ol.dish li.side{background:transparent;padding:2px 12px;color:var(--muted)}
+.snack{margin:14px 0 0;font-size:.88rem;color:var(--muted);border-top:1px dashed var(--line);padding-top:12px}
+.note{margin:12px 0 0;font-size:.85rem;padding:10px 12px;border-radius:12px;border:1px solid var(--sun)}
+/* scout */
+.next{display:flex;gap:14px;align-items:stretch}
+.cal{flex:none;width:64px;border-radius:14px;background:var(--sky);color:var(--card);text-align:center;padding:8px 4px;display:flex;flex-direction:column;justify-content:center}
+.cal .dw{font:600 .7rem/1 var(--body);text-transform:uppercase;letter-spacing:.08em;opacity:.85}
+.cal .dn{font:700 1.9rem/1.05 var(--display)}
+.cal .mo{font:600 .72rem/1 var(--body);text-transform:uppercase;letter-spacing:.06em;opacity:.85}
+.next .what{min-width:0;display:flex;flex-direction:column;justify-content:center;gap:4px}
+.next .what strong{font:700 1.2rem/1.2 var(--display);text-wrap:balance}
+.next .what span{color:var(--muted);font-size:.92rem}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:600 .75rem/1 var(--body);padding:5px 9px;border-radius:99px;background:var(--sky-soft);color:var(--sky)}
+.chip.tbc{background:transparent;border:1px solid var(--sun);color:var(--fg)}
+ul.list{list-style:none;margin:16px 0 0;padding:0;border-top:1px solid var(--line)}
+ul.list li{display:grid;grid-template-columns:5.2rem 1fr;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:baseline}
+ul.list .when2{font-size:.85rem;color:var(--muted);font-weight:600}
+ul.list .txt{min-width:0}
+ul.list .time{color:var(--muted);font-size:.85rem;margin-left:6px;white-space:nowrap}
+ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--muted)}
+.off-badge{display:inline-block;font:600 .72rem/1 var(--body);padding:4px 8px;border-radius:99px;border:1px solid var(--sun);color:var(--fg)}
+.more{margin-top:10px;background:none;border:0;padding:6px 0;color:var(--sky);font:600 .9rem var(--body);cursor:pointer}
+.more:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
+.src{font-size:.8rem;color:var(--muted);margin:10px 0 0}
+.src a{color:var(--sky)}
+@media (prefers-reduced-motion:no-preference){section{animation:in .35s ease both}section+section{animation-delay:.06s}
+@keyframes in{from{transform:translateY(6px)}to{transform:none}}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1 id="date">Oggi</h1>
+    <p>Castelfranco Veneto</p>
+  </header>
+
+  <section aria-labelledby="w-h">
+    <h2 class="eyebrow" id="w-h"><span>Meteo</span><span id="w-upd" class="num"></span></h2>
+    <div id="weather"><p class="status">Carico le previsioni…</p></div>
+  </section>
+
+  <section aria-labelledby="m-h">
+    <h2 class="eyebrow" id="m-h"><span>Menù del nido</span><span>Salvarosa · Primavera</span></h2>
+    <div class="picker">
+      <button id="prev" aria-label="Settimana precedente">‹</button>
+      <div class="tabs" id="tabs"></div>
+      <button id="next" aria-label="Settimana successiva">›</button>
+    </div>
+    <div id="menu"></div>
+  </section>
+
+  <section aria-labelledby="s-h">
+    <h2 class="eyebrow" id="s-h"><span>Scout · Branco</span><span id="s-upd"></span></h2>
+    <div id="scout"><p class="status">Carico il calendario…</p></div>
+  </section>
+</main>
+
+<script>
+// ---------- impostazioni ----------
+const LAT = 45.6717, LON = 11.9268;            // Castelfranco Veneto
+const CYCLE_START = new Date(2026, 8, 28);     // lunedì 28/09/2026 = I settimana
+
+const MENU = [
+  [ // I
+    ["Risotto allo zafferano","Frittata al forno con verdure","Fagiolini all'olio","Pane"],
+    ["Pasta al pomodoro","Polpettone di tacchino","Zucchine all'olio","Pane"],
+    ["Passato di verdure con pastina","Polpettine di manzo in umido","Verdure cotte","Pane"],
+    ["Pasta all'olio EVO e grana","Filetti di merluzzo al forno","Verdure crude","Pane"],
+    ["Crema di piselli e zucchine con crostini","Mozzarella","Pomodoro","Pane"]
+  ],
+  [ // II
+    ["Orzotto in crema di piselli","Uova sode","Carote","Zucchine","Pane"],
+    ["Pasta alla crudaiola","Bocconcini di pollo","Verdure crude","Pane"],
+    ["Cous cous di verdure","Bocconcini di manzo agli aromi","Cappuccio","Pomodoro","Pane"],
+    ["Pasta al pomodoro","Filetto di platessa al limone","Peperonata","Pane"],
+    ["Pizza margherita","Caciottina fresca","Verdure crude","Pane"]
+  ],
+  [ // III
+    ["Gnocchi alla romana","Frittata","Piselli al prezzemolo","Carote","Pane"],
+    ["Riso con piselli","Carote","Insalata","Pane"],
+    ["Pasta al pomodoro","Caciottina fresca","Verdure crude","Pane"],
+    ["Passato di verdure con pastina","Filetti di merluzzo al forno","Zucchine all'olio","Pane"],
+    ["Pasta al ragù di tacchino","Finocchio","Carote","Pane"]
+  ],
+  [ // IV
+    ["Pasta al pesto","Stracchino","Cavolfiori all'olio","Pane"],
+    ["Riso al pomodoro","Polpette di legumi","Verdure crude","Pane"],
+    ["Pasta alla norma","Bocconcini di pollo","Insalata","Pane"],
+    ["Minestrone","Filetto di platessa","Verdure crude","Pane"],
+    ["Pasta al ragù di manzo","Verdure cotte","Pane"]
+  ]
+];
+const ROMAN = ["I","II","III","IV"];
+const DAYS = ["Lun","Mar","Mer","Gio","Ven"];
+const DAYS_LONG = ["Domenica","Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato"];
+const MONTHS = ["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
+
+// ---------- date ----------
+const startOfDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const mondayOf = d => addDays(startOfDay(d), -((d.getDay() + 6) % 7));
+function weekIndex(monday){
+  const days = Math.round((Date.UTC(monday.getFullYear(),monday.getMonth(),monday.getDate()) -
+    Date.UTC(CYCLE_START.getFullYear(),CYCLE_START.getMonth(),CYCLE_START.getDate())) / 864e5);
+  return ((Math.floor(days / 7) % 4) + 4) % 4;
+}
+const longDate = d => `${DAYS_LONG[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+
+// ---------- menù ----------
+const today = startOfDay(new Date());
+document.getElementById("date").textContent = longDate(today);
+
+// sabato e domenica mostrano il lunedì successivo
+let selected = (today.getDay() === 0 || today.getDay() === 6) ? addDays(mondayOf(today), 7) : today;
+
+function renderMenu(){
+  const mon = mondayOf(selected);
+  const wi = weekIndex(mon);
+  const tabs = document.getElementById("tabs");
+  tabs.innerHTML = "";
+  DAYS.forEach((label, i) => {
+    const d = addDays(mon, i);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.id = "day-" + i;
+    b.textContent = label;
+    b.setAttribute("aria-pressed", d.getTime() === selected.getTime());
+    if (d.getTime() === today.getTime()) b.classList.add("today");
+    b.onclick = () => { selected = d; renderMenu(); };
+    tabs.appendChild(b);
+  });
+
+  const di = (selected.getDay() + 6) % 7;
+  const items = MENU[wi][di];
+  const rel = selected.getTime() === today.getTime() ? "Oggi" :
+              selected.getTime() === addDays(today,1).getTime() ? "Domani" : "";
+  const title = (rel ? rel + ", " : "") + longDate(selected).replace(/^\w/, c => rel ? c.toLowerCase() : c);
+
+  let html = `<p class="when">${title}<span class="week">Settimana ${ROMAN[wi]}</span></p><ol class="dish">`;
+  items.forEach((it, i) => {
+    const side = it === "Pane";
+    html += `<li${side ? ' class="side"' : ""}>${it}</li>`;
+  });
+  html += `</ol><p class="snack">Merenda del mattino: frutta di stagione. Pomeriggio a rotazione: pane, latte, yogurt o frutta.</p>`;
+  const m = selected.getMonth();
+  if (m >= 10 || m <= 2) html += `<p class="note">Questo è il menù estivo (aprile–ottobre). Da novembre potrebbe esserci il menù invernale: va aggiornato.</p>`;
+  document.getElementById("menu").innerHTML = html;
+}
+document.getElementById("prev").onclick = () => { selected = addDays(selected, -7); renderMenu(); };
+document.getElementById("next").onclick = () => { selected = addDays(selected, 7); renderMenu(); };
+renderMenu();
+
+// ---------- meteo (Open-Meteo, senza chiave) ----------
+const ICONS = {
+  sun:`<svg viewBox="0 0 48 48" fill="none" stroke-width="3" stroke-linecap="round"><circle cx="24" cy="24" r="9" fill="var(--sun)" stroke="var(--sun)"/><g stroke="var(--sun)"><path d="M24 4v5M24 39v5M4 24h5M39 24h5M9.9 9.9l3.5 3.5M34.6 34.6l3.5 3.5M9.9 38.1l3.5-3.5M34.6 13.4l3.5-3.5"/></g></svg>`,
+  partly:`<svg viewBox="0 0 48 48" fill="none" stroke-width="3" stroke-linecap="round"><circle cx="18" cy="18" r="7" fill="var(--sun)" stroke="var(--sun)"/><g stroke="var(--sun)"><path d="M18 3v4M3 18h4M7.4 7.4l2.8 2.8M28.6 7.4l-2.8 2.8"/></g><path d="M16 40h20a8 8 0 0 0 0-16 11 11 0 0 0-20.5 3A6.5 6.5 0 0 0 16 40Z" fill="var(--card)" stroke="var(--muted)"/></svg>`,
+  cloud:`<svg viewBox="0 0 48 48" fill="none" stroke-width="3" stroke-linejoin="round"><path d="M14 38h22a9 9 0 0 0 0-18 12 12 0 0 0-22.6 3.5A7.3 7.3 0 0 0 14 38Z" fill="var(--sky-soft)" stroke="var(--muted)"/></svg>`,
+  fog:`<svg viewBox="0 0 48 48" fill="none" stroke="var(--muted)" stroke-width="3" stroke-linecap="round"><path d="M8 16h32M4 24h40M10 32h28M14 40h20"/></svg>`,
+  rain:`<svg viewBox="0 0 48 48" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 30h22a9 9 0 0 0 0-18 12 12 0 0 0-22.6 3.5A7.3 7.3 0 0 0 14 30Z" fill="var(--sky-soft)" stroke="var(--muted)"/><path d="M17 36l-2 5M25 36l-2 5M33 36l-2 5" stroke="var(--sky)"/></svg>`,
+  snow:`<svg viewBox="0 0 48 48" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 30h22a9 9 0 0 0 0-18 12 12 0 0 0-22.6 3.5A7.3 7.3 0 0 0 14 30Z" fill="var(--sky-soft)" stroke="var(--muted)"/><g fill="var(--sky)"><circle cx="17" cy="38" r="2"/><circle cx="25" cy="41" r="2"/><circle cx="33" cy="38" r="2"/></g></svg>`,
+  storm:`<svg viewBox="0 0 48 48" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 30h22a9 9 0 0 0 0-18 12 12 0 0 0-22.6 3.5A7.3 7.3 0 0 0 14 30Z" fill="var(--sky-soft)" stroke="var(--muted)"/><path d="M26 31l-5 7h6l-4 7" stroke="var(--sun)"/></svg>`
+};
+function wmo(c){
+  if (c === 0) return ["Sereno","sun"];
+  if (c === 1) return ["Quasi sereno","sun"];
+  if (c === 2) return ["Poco nuvoloso","partly"];
+  if (c === 3) return ["Coperto","cloud"];
+  if (c === 45 || c === 48) return ["Nebbia","fog"];
+  if (c >= 51 && c <= 57) return ["Pioviggine","rain"];
+  if (c >= 61 && c <= 67) return [c >= 65 ? "Pioggia forte" : "Pioggia","rain"];
+  if (c >= 71 && c <= 77) return ["Neve","snow"];
+  if (c >= 80 && c <= 82) return ["Rovesci","rain"];
+  if (c === 85 || c === 86) return ["Rovesci di neve","snow"];
+  if (c >= 95) return ["Temporale","storm"];
+  return ["—","cloud"];
+}
+const r = n => Math.round(n);
+
+function renderWeather(w, cached){
+  const c = w.current, d = w.daily;
+  const [desc, icon] = wmo(c.weather_code);
+  let html = `<div class="now">${ICONS[icon]}<div class="temp num">${r(c.temperature_2m)}°</div>
+    <div class="desc"><strong>${desc}</strong><span class="num">Min ${r(d.temperature_2m_min[0])}° · max ${r(d.temperature_2m_max[0])}°</span></div></div>
+    <div class="facts num"><span>Percepita <b>${r(c.apparent_temperature)}°</b></span><span>Umidità <b>${r(c.relative_humidity_2m)}%</b></span>
+    <span>Vento <b>${r(c.wind_speed_10m)} km/h</b></span><span>Pioggia oggi <b>${d.precipitation_probability_max[0] ?? 0}%</b></span></div><div class="days">`;
+  d.time.forEach((t, i) => {
+    const day = new Date(t + "T12:00");
+    const [dd, ic] = wmo(d.weather_code[i]);
+    html += `<div class="day" title="${dd}"><div class="d">${i === 0 ? "Oggi" : DAYS_LONG[day.getDay()].slice(0,3)}</div>${ICONS[ic]}
+      <div class="t num">${r(d.temperature_2m_max[i])}° <span>${r(d.temperature_2m_min[i])}°</span></div>
+      <div class="r num">${d.precipitation_probability_max[i] ?? 0}%</div></div>`;
+  });
+  html += `</div>`;
+  if (cached) html += `<p class="status">Senza connessione: mostro gli ultimi dati salvati.</p>`;
+  document.getElementById("weather").innerHTML = html;
+  const up = new Date(w._fetched);
+  document.getElementById("w-upd").textContent = "agg. " + up.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
+}
+
+async function loadWeather(){
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}` +
+    `&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code` +
+    `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max` +
+    `&timezone=Europe%2FRome&forecast_days=5`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(res.status);
+    const w = await res.json();
+    w._fetched = Date.now();
+    try { localStorage.setItem("meteo", JSON.stringify(w)); } catch(e){}
+    renderWeather(w, false);
+  } catch(e) {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem("meteo")); } catch(_){}
+    if (saved) renderWeather(saved, true);
+    else document.getElementById("weather").innerHTML =
+      `<p class="err">Non riesco a caricare il meteo. Controlla la connessione e ricarica la pagina.</p>`;
+  }
+}
+loadWeather();
+
+// ---------- calendario scout (Google Sheet dei capi, letto in diretta) ----------
+const SHEET_ID = "1IFtt4f5QBSCpX3E3lti0LiQgoKYYBjt0X91n29wsZP0";
+const SHEET_GID = "1374568277";
+const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit#gid=${SHEET_GID}`;
+const SHEET_CSV = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&headers=0&gid=${SHEET_GID}`;
+// copia di riserva (letta il 2 novembre 2026), usata se il foglio non risponde
+const SCOUT_BACKUP = [
+  ["2026-10-18","USCITA PASSAGGI"],["2026-10-23","Riunione genitori cuccioli 20:30"],["2026-10-24","Prima attività 🥳"],
+  ["2026-10-31","NO ATTIVITÀ ⚠️"],["2026-11-07","Attività entrata cuccioli 🐺"],["2026-11-14","Attività 15:00-17:30"],
+  ["2026-11-21","attività lunga con messa 15:00-19:30"],["2026-11-23","Riunione genitori (da confermare)"],
+  ["2026-11-29","caccia domenicale 9:00-15:00"],["2026-12-05","NO ATTIVITÀ ⚠️"],["2026-12-12","Attività 15:00-17:30"],
+  ["2026-12-19","Attività 15:00-17:30"],["2026-12-24","VEGLIA DI NATALE DI BRANCO"],["2026-12-26","NO ATTIVITÀ ⚠️"],
+  ["2027-01-02","NO ATTIVITÀ ⚠️"],["2027-01-09","Attività 15:00-17:30"],["2027-02-20","uscita Thinking Day"],
+  ["2027-02-21","uscita Thinking Day"],["2027-06-12","chiusura scout"]
+];
+
+function parseCSV(text){
+  const rows = []; let row = [], cell = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) { if (ch === '"') { if (text[i+1] === '"') { cell += '"'; i++; } else q = false; } else cell += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === ",") { row.push(cell); cell = ""; }
+    else if (ch === "\n") { row.push(cell); rows.push(row); row = []; cell = ""; }
+    else if (ch !== "\r") cell += ch;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+function toDate(s){
+  s = (s || "").trim();
+  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return new Date(+m[3], +m[2]-1, +m[1]);
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return new Date(+m[1], +m[2]-1, +m[3]);
+  return null;
+}
+// ogni cella con una data + la cella alla sua destra = un'attività
+function eventsFromRows(rows){
+  const out = [];
+  rows.forEach(r => r.forEach((c, i) => {
+    const d = toDate(c), t = (r[i+1] || "").trim();
+    if (d && t && !toDate(t)) out.push({ d, t });
+  }));
+  return out;
+}
+function groupEvents(list){
+  list.sort((a, b) => a.d - b.d);
+  const g = [];
+  list.forEach(e => {
+    const last = g[g.length-1];
+    if (last && last.t.toLowerCase() === e.t.toLowerCase() && addDays(last.end, 1).getTime() === e.d.getTime()) last.end = e.d;
+    else g.push({ d: e.d, end: e.d, t: e.t });
+  });
+  return g;
+}
+function describe(t){
+  const off = /no attivit/i.test(t);
+  const tbc = /da confermare/i.test(t);
+  const tm = t.match(/(\d{1,2}[:.]\d{2})(?:\s*[-–]\s*(\d{1,2}[:.]\d{2}))?/);
+  let title = t.replace(/\(?da confermare\)?/i, "").replace(tm ? tm[0] : "", "").replace(/\s{2,}/g, " ").trim();
+  title = title.charAt(0).toUpperCase() + title.slice(1);
+  // titoli tutti in maiuscolo -> solo iniziale maiuscola
+  if (/\p{L}/u.test(title) && title === title.toUpperCase())
+    title = title.charAt(0) + title.slice(1).toLowerCase();
+  const time = tm ? (tm[2] ? `${tm[1]}–${tm[2]}` : `ore ${tm[1]}`) : "";
+  return { off, tbc, title: off ? "Niente attività" : title, time };
+}
+const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const MON_SHORT = ["gen","feb","mar","apr","mag","giu","lug","ago","set","ott","nov","dic"];
+function rangeLabel(e){
+  if (e.end.getTime() === e.d.getTime()) return `${DAYS_LONG[e.d.getDay()].slice(0,3)} ${e.d.getDate()} ${MON_SHORT[e.d.getMonth()]}`;
+  return `${e.d.getDate()}–${e.end.getDate()} ${MON_SHORT[e.end.getMonth()]}`;
+}
+function relLabel(d){
+  const n = Math.round((d - today) / 864e5);
+  if (n === 0) return "oggi";
+  if (n === 1) return "domani";
+  if (n < 7) return `${DAYS_LONG[d.getDay()].toLowerCase()}, tra ${n} giorni`;
+  return `tra ${n} giorni`;
+}
+
+let scoutShowAll = false;
+function renderScout(events, live){
+  const box = document.getElementById("scout");
+  const upcoming = groupEvents(events).filter(e => e.end >= today);
+  if (!upcoming.length) { box.innerHTML = `<p class="status">Nessuna attività in programma nel calendario.</p>`; return; }
+
+  const main = upcoming.find(e => !describe(e.t).off) || upcoming[0];
+  const md = describe(main.t);
+  let html = `<div class="next"><div class="cal"><span class="dw">${DAYS_LONG[main.d.getDay()].slice(0,3)}</span>
+    <span class="dn num">${main.d.getDate()}</span><span class="mo">${MON_SHORT[main.d.getMonth()]}</span></div>
+    <div class="what"><span>Prossima attività · ${relLabel(main.d)}</span><strong>${esc(md.title)}</strong>
+    <div class="chips">${md.time ? `<span class="chip num">${md.time}</span>` : ""}${md.tbc ? `<span class="chip tbc">da confermare</span>` : ""}</div></div></div>`;
+
+  const rest = upcoming.filter(e => e !== main);
+  const shown = scoutShowAll ? rest : rest.slice(0, 5);
+  if (shown.length) {
+    html += `<ul class="list">`;
+    shown.forEach(e => {
+      const x = describe(e.t);
+      html += `<li class="${x.off ? "off" : ""}"><span class="when2 num">${rangeLabel(e)}</span><span class="txt">` +
+        (x.off ? `<span class="off-badge">Niente attività</span>` :
+          `${esc(x.title)}${x.time ? `<span class="time num">${x.time}</span>` : ""}${x.tbc ? ` <span class="chip tbc">da confermare</span>` : ""}`) +
+        `</span></li>`;
+    });
+    html += `</ul>`;
+    if (rest.length > 5) html += `<button type="button" class="more" id="scout-more">${scoutShowAll ? "Mostra meno" : `Mostra tutte (${rest.length})`}</button>`;
+  }
+  html += `<p class="src">${live ? "Dal calendario dei capi, aggiornato in automatico." : "Copia salvata: il foglio dei capi non risponde ora."} <a href="${SHEET_URL}" target="_blank" rel="noopener">Apri il foglio</a></p>`;
+  box.innerHTML = html;
+  const more = document.getElementById("scout-more");
+  if (more) more.onclick = () => { scoutShowAll = !scoutShowAll; renderScout(events, live); };
+}
+
+async function loadScout(){
+  try {
+    const res = await fetch(SHEET_CSV);
+    if (!res.ok) throw new Error(res.status);
+    const ev = eventsFromRows(parseCSV(await res.text()));
+    if (!ev.length) throw new Error("vuoto");
+    try { localStorage.setItem("scout", JSON.stringify(ev.map(e => [e.d.getTime(), e.t]))); } catch(_){}
+    renderScout(ev, true);
+  } catch(e) {
+    let ev = null;
+    try { ev = JSON.parse(localStorage.getItem("scout")).map(([t, s]) => ({ d: new Date(t), t: s })); } catch(_){}
+    if (!ev || !ev.length) ev = SCOUT_BACKUP.map(([s, t]) => ({ d: toDate(s), t }));
+    renderScout(ev, false);
+  }
+}
+loadScout();
+
+// aggiorna ogni 30 minuti e quando si riapre la pagina
+setInterval(() => { loadWeather(); loadScout(); }, 30 * 60 * 1000);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    if (startOfDay(new Date()).getTime() !== today.getTime()) location.reload();
+    else { loadWeather(); loadScout(); }
+  }
+});
+</script>
+</body>
+</html>
