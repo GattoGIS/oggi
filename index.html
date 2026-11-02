@@ -7,6 +7,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Oggi">
 <meta name="theme-color" content="#eef2f6">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="apple-touch-icon.png">
 <title>Oggi a casa</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600&display=swap">
@@ -84,6 +86,13 @@ ol.dish li.side{background:transparent;padding:2px 12px;color:var(--muted)}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{font:600 .75rem/1 var(--body);padding:5px 9px;border-radius:99px;background:var(--sky-soft);color:var(--sky)}
 .chip.tbc{background:transparent;border:1px solid var(--sun);color:var(--fg)}
+.next .what .bigtime{display:inline-flex;align-items:center;gap:8px;align-self:flex-start;margin-top:2px;padding:7px 12px 7px 10px;border-radius:12px;background:var(--sky);color:var(--card);font:700 1.25rem/1 var(--display)}
+.next .what .bigtime svg{width:20px;height:20px;flex:none}
+.next .what .facts2{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.next .what .bigplace{display:inline-flex;align-items:center;gap:7px;padding:6px 12px 6px 9px;border-radius:12px;border:2px solid var(--sky);color:var(--fg);font:700 1.1rem/1 var(--display)}
+.next .what .bigplace svg{width:18px;height:18px;flex:none;color:var(--sky)}
+ul.list .place{color:var(--muted);font-size:.85rem;margin-left:6px;white-space:nowrap}
+.next .what .bigtime.missing{background:transparent;color:var(--muted);border:1px dashed var(--muted);font:600 .85rem/1.2 var(--body)}
 ul.list{list-style:none;margin:16px 0 0;padding:0;border-top:1px solid var(--line)}
 ul.list li{display:grid;grid-template-columns:5.2rem 1fr;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:baseline}
 ul.list .when2{font-size:.85rem;color:var(--muted);font-weight:600}
@@ -306,6 +315,11 @@ const SCOUT_BACKUP = [
   ["2027-01-02","NO ATTIVITÀ ⚠️"],["2027-01-09","Attività 15:00-17:30"],["2027-02-20","uscita Thinking Day"],
   ["2027-02-21","uscita Thinking Day"],["2027-06-12","chiusura scout"]
 ];
+// aggiunte a mano (es. orari e luoghi arrivati su WhatsApp): data -> { time, place }
+// se il foglio indica già un orario, vince quello scritto qui
+const SCOUT_EXTRA = {
+  "2026-11-07": { time: "15:00-17:30", place: "Palazzetto" }
+};
 
 function parseCSV(text){
   const rows = []; let row = [], cell = "", q = false;
@@ -359,6 +373,15 @@ function describe(t){
   const time = tm ? (tm[2] ? `${tm[1]}–${tm[2]}` : `ore ${tm[1]}`) : "";
   return { off, tbc, title: off ? "Niente attività" : title, time };
 }
+const isoKey = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+function info(e){
+  const x = describe(e.t), extra = SCOUT_EXTRA[isoKey(e.d)];
+  if (extra) {
+    if (extra.time) x.time = extra.time.replace(/\s*-\s*/, "–");
+    if (extra.place) x.place = extra.place;
+  }
+  return x;
+}
 const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const MON_SHORT = ["gen","feb","mar","apr","mag","giu","lug","ago","set","ott","nov","dic"];
 function rangeLabel(e){
@@ -380,21 +403,28 @@ function renderScout(events, live){
   if (!upcoming.length) { box.innerHTML = `<p class="status">Nessuna attività in programma nel calendario.</p>`; return; }
 
   const main = upcoming.find(e => !describe(e.t).off) || upcoming[0];
-  const md = describe(main.t);
+  const md = info(main);
   let html = `<div class="next"><div class="cal"><span class="dw">${DAYS_LONG[main.d.getDay()].slice(0,3)}</span>
     <span class="dn num">${main.d.getDate()}</span><span class="mo">${MON_SHORT[main.d.getMonth()]}</span></div>
     <div class="what"><span>Prossima attività · ${relLabel(main.d)}</span><strong>${esc(md.title)}</strong>
-    <div class="chips">${md.time ? `<span class="chip num">${md.time}</span>` : ""}${md.tbc ? `<span class="chip tbc">da confermare</span>` : ""}</div></div></div>`;
+    <div class="facts2">${md.time
+      ? `<span class="bigtime num"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>${md.time}</span>`
+      : `<span class="bigtime missing">Orario non ancora indicato</span>`}${md.place
+      ? `<span class="bigplace"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg>${esc(md.place)}</span>` : ""}</div>
+    ${md.tbc ? `<div class="chips"><span class="chip tbc">da confermare</span></div>` : ""}</div></div>`;
 
   const rest = upcoming.filter(e => e !== main);
   const shown = scoutShowAll ? rest : rest.slice(0, 5);
   if (shown.length) {
     html += `<ul class="list">`;
     shown.forEach(e => {
-      const x = describe(e.t);
-      html += `<li class="${x.off ? "off" : ""}"><span class="when2 num">${rangeLabel(e)}</span><span class="txt">` +
+      const x = info(e);
+      // più è lontana, più è trasparente: piena entro 7 giorni, poi sfuma fino al 35% a 2 mesi
+      const days = Math.round((e.d - today) / 864e5);
+      const fade = Math.max(0.35, Math.min(1, 1 - (days - 7) / 53 * 0.65)).toFixed(2);
+      html += `<li class="${x.off ? "off" : ""}" style="opacity:${fade}"><span class="when2 num">${rangeLabel(e)}</span><span class="txt">` +
         (x.off ? `<span class="off-badge">Niente attività</span>` :
-          `${esc(x.title)}${x.time ? `<span class="time num">${x.time}</span>` : ""}${x.tbc ? ` <span class="chip tbc">da confermare</span>` : ""}`) +
+          `${esc(x.title)}${x.time ? `<span class="time num">${x.time}</span>` : ""}${x.place ? `<span class="place">· ${esc(x.place)}</span>` : ""}${x.tbc ? ` <span class="chip tbc">da confermare</span>` : ""}`) +
         `</span></li>`;
     });
     html += `</ul>`;
