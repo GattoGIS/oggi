@@ -56,6 +56,7 @@ section{background:var(--card);border:1px solid var(--line);border-radius:18px;p
 .sec-toggle .sec-title{flex:1;min-width:0}
 .sec-toggle .chev{width:14px;height:14px;flex:none;transition:transform .2s ease}
 .sum-ic svg{width:22px;height:22px;vertical-align:-6px;margin-right:6px}
+.sec-sum.alert{color:var(--alert)}
 .sec-sum{display:none;min-width:0;max-width:62%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:none;letter-spacing:0;font:600 .9rem/1.2 var(--body);color:var(--fg)}
 section.collapsed .eyebrow{margin:0}
 section.collapsed .sec-body,section.collapsed .sec-meta{display:none}
@@ -239,7 +240,7 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
     <p>Castelfranco Veneto</p>
     <div class="daybar" role="img" id="daybar" aria-label="Avanzamento della giornata">
       <div class="db-track"><span class="db-future" id="db-future"></span><span class="db-dot" id="db-dot"><span class="db-now num" id="db-now"></span></span></div>
-      <div class="db-ticks num"><span style="left:0">0</span><span style="left:29.1667%">7</span><span style="left:50%">12</span><span style="left:66.6667%">16</span><span style="left:75%">18</span><span style="left:95.8333%">23</span></div>
+      <div class="db-ticks num"><span style="left:0">0</span><span style="left:29.1667%">7</span><span style="left:33.3333%">8</span><span style="left:37.5%">9</span><span style="left:54.1667%">13</span><span style="left:66.6667%">16</span><span style="left:75%">18</span><span style="left:95.8333%">23</span></div>
     </div>
   </header>
 
@@ -279,7 +280,7 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
     <div id="scout"><p class="status">Carico il calendario…</p></div>
   </section>
 </main>
-<p class="ver">Versione del 3 novembre, 11:30</p>
+<p class="ver">Versione del 3 novembre, 11:45</p>
 
 <script>
 // ---------- sezioni richiudibili (lo stato resta salvato su ogni telefono) ----------
@@ -314,10 +315,11 @@ document.querySelectorAll("main > section").forEach(sec => {
     try { localStorage.setItem("collapsed", JSON.stringify(collapsed)); } catch(_) {}
   };
 });
-function setSummary(key, text, iconSvg){
+function setSummary(key, text, iconSvg, alert){
   const el = document.getElementById(key + "-sum");
   if (!el) return;
   el.textContent = text;
+  el.classList.toggle("alert", !!alert);
   if (iconSvg) el.insertAdjacentHTML("afterbegin", `<span class="sum-ic">${iconSvg}</span>`);
 }
 
@@ -810,9 +812,9 @@ function renderAgenda(data, cached){
   if (cached) html += `<p class="status">Senza connessione: mostro gli ultimi appuntamenti salvati.</p>`;
   box.innerHTML = html;
   const todays = (byDay[isoKey(today)] || []).filter(e => e.allDay || !e.end || e.end > nowHM);
-  setSummary("a-h", !todays.length ? "Oggi niente in agenda"
-    : `Oggi ${todays.length === 1 ? "1 impegno" : todays.length + " impegni"}` +
-      (todays.find(e => !e.allDay) ? ` · ${todays.find(e => !e.allDay).start}` : ""));
+  // da chiuso: il prossimo impegno in rosso con il conto alla rovescia
+  if (firstEv) setSummary("a-h", `${firstEv.title} · ${countdown(firstEv, now)}`, null, true);
+  else setSummary("a-h", "Niente in programma");
   document.getElementById("a-upd").textContent = "agg. " + new Date(data.generated).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
 }
 
@@ -860,6 +862,23 @@ function tickWork(){
   if (el) el.textContent = `${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
   setSummary("l-h", st.running ? `Dalle ${workData.first} · ${fmtMin(Math.floor(sec / 60))}` : `${workData.first}–${workData.last} · ${fmtMin(Math.floor(sec / 60))}`);
 }
+// nomi dei programmi più leggibili: "qgis-ltr-bin" -> "QGIS", "Adobe Illustrator 2025" -> "Illustrator"
+const APP_NAMES = [
+  [/qgis/i, "QGIS"], [/illustrator/i, "Illustrator"], [/photoshop/i, "Photoshop"], [/indesign/i, "InDesign"],
+  [/acrobat|acrord/i, "Acrobat"], [/bridge/i, "Adobe Bridge"],
+  [/fme\s*data\s*inspector|fmedatainspector/i, "FME Data Inspector"], [/fme\s*workbench|fmeworkbench|^fme$/i, "FME Workbench"],
+  [/arcgis\s*pro|arcgispro/i, "ArcGIS Pro"], [/pgadmin/i, "pgAdmin"], [/dbeaver/i, "DBeaver"], [/geoserver/i, "GeoServer"],
+  [/excel/i, "Excel"], [/winword|\bword\b/i, "Word"], [/powerpnt|powerpoint/i, "PowerPoint"], [/outlook|^olk$/i, "Outlook"],
+  [/teams/i, "Teams"], [/onenote/i, "OneNote"], [/visual studio code|^code$/i, "VS Code"], [/notepad\+\+/i, "Notepad++"],
+  [/notepad/i, "Blocco note"], [/zoom/i, "Zoom"], [/slack/i, "Slack"], [/whatsapp/i, "WhatsApp"], [/firefox/i, "Firefox"],
+  [/python/i, "Python"], [/blender/i, "Blender"], [/gimp/i, "GIMP"], [/inkscape/i, "Inkscape"], [/anydesk/i, "AnyDesk"]
+];
+function friendlyApp(name){
+  for (const [re, label] of APP_NAMES) if (re.test(name)) return label;
+  // regola generica: toglie suffissi tecnici e mette l'iniziale maiuscola
+  let n = name.replace(/\.exe$/i, "").replace(/[-_ ](bin|x64|64|32|app|ltr)$/ig, "").replace(/[-_]+/g, " ").trim();
+  return n ? n.charAt(0).toUpperCase() + n.slice(1) : name;
+}
 function renderWork(){
   const box = document.getElementById("work");
   if (!workData || workData.empty || !workData.first || workData.date !== isoKey(today)) {
@@ -870,7 +889,9 @@ function renderWork(){
   const st = workStatus();
   const pauses = workData.pauses || [];
   const pauseMin = pauses.reduce((a, p) => a + Math.max(0, (hmToDate(p.to) - hmToDate(p.from)) / 60000), 0);
-  const apps = Object.entries(workData.apps || {}).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 7);
+  const merged = {};
+  Object.entries(workData.apps || {}).forEach(([k, v]) => { const n = friendlyApp(k); merged[n] = (merged[n] || 0) + v; });
+  const apps = Object.entries(merged).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 7);
   const max = apps.length ? apps[0][1] : 1;
   let html = `<div class="wk-top"><div class="wk-clock num"><span id="wk-clock">0:00:00</span><small>dal primo movimento alle ${workData.first}</small></div>` +
     (st.running ? `<span class="wk-state"><i></i>in corso</span>` : `<span class="wk-state idle"><i></i>fermo dalle ${workData.last}</span>`) + `</div>`;
