@@ -347,7 +347,7 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
     <div id="scout"><p class="status">Carico il calendario…</p></div>
   </section>
 </main>
-<p class="ver">Versione del 3 novembre, 17:00 · <button type="button" id="order-reset">ripristina l'ordine dei riquadri</button></p>
+<p class="ver">Versione del 3 novembre, 17:20 · <button type="button" id="order-reset">ripristina l'ordine dei riquadri</button></p>
 
 <script>
 // ---------- sezioni richiudibili (lo stato resta salvato su ogni telefono) ----------
@@ -946,7 +946,10 @@ function renderAgenda(data, cached){
   // il primo evento non ancora concluso (preferendo quelli con un orario) va in rosso scuro
   const upcoming = data.events.filter(e => e.date > isoKey(today) || e.allDay || !e.end || e.endDate || e.end > nowHM)
     .filter(e => e.date >= isoKey(today));
-  const firstEv = upcoming.find(e => !e.allDay) || upcoming[0];
+  // rosso e conto alla rovescia solo per gli impegni di oggi
+  const todayUp = upcoming.filter(e => e.date === isoKey(today));
+  const firstEv = todayUp.find(e => !e.allDay) || todayUp[0];
+  const nextEv = firstEv || upcoming.find(e => !e.allDay) || upcoming[0];
   let html = "";
   for (let i = 0; i < AGENDA_DAYS; i++) {
     const d = addDays(today, i), key = isoKey(d), list = byDay[key] || [];
@@ -975,6 +978,12 @@ function renderAgenda(data, cached){
   const todays = (byDay[isoKey(today)] || []).filter(e => e.allDay || !e.end || e.end > nowHM);
   // da chiuso: il prossimo impegno in rosso con il conto alla rovescia
   if (firstEv) setSummary("a-h", `${firstEv.title} · ${countdown(firstEv, now)}`, null, true);
+  else if (nextEv) {
+    // niente oggi: riassunto normale con il prossimo impegno
+    const d = new Date(nextEv.date + "T12:00");
+    const when = nextEv.date === isoKey(addDays(today, 1)) ? "Domani" : `${DAYS_LONG[d.getDay()].slice(0, 3)} ${d.getDate()}`;
+    setSummary("a-h", `Oggi niente · ${when}${nextEv.allDay ? "" : " " + nextEv.start}: ${nextEv.title}`);
+  }
   else setSummary("a-h", "Niente in programma");
   document.getElementById("a-upd").textContent = "agg. " + new Date(data.generated).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
 }
@@ -1034,6 +1043,8 @@ const APP_NAMES = [
   [/notepad/i, "Blocco note"], [/zoom/i, "Zoom"], [/slack/i, "Slack"], [/whatsapp/i, "WhatsApp"], [/firefox/i, "Firefox"],
   [/python/i, "Python"], [/blender/i, "Blender"], [/gimp/i, "GIMP"], [/inkscape/i, "Inkscape"], [/anydesk/i, "AnyDesk"]
 ];
+// processi di sistema di Windows (es. "dwm" = Desktop Window Manager, che disegna le finestre)
+const SYSTEM_APPS = /^(dwm|desktop window manager|logonui|consent|lockapp|searchhost|shellhost|shellexperiencehost|startmenuexperiencehost|applicationframehost|textinputhost|windows explorer|esplora risorse|explorer|rundll32|dllhost|sihost|ctfmon)$/i;
 function friendlyApp(name){
   for (const [re, label] of APP_NAMES) if (re.test(name)) return label;
   // regola generica: toglie suffissi tecnici e mette l'iniziale maiuscola
@@ -1051,7 +1062,10 @@ function renderWork(){
   const pauses = workData.pauses || [];
   const pauseMin = pauses.reduce((a, p) => a + Math.max(0, (hmToDate(p.to) - hmToDate(p.from)) / 60000), 0);
   const merged = {};
-  Object.entries(workData.apps || {}).forEach(([k, v]) => { const n = friendlyApp(k); merged[n] = (merged[n] || 0) + v; });
+  Object.entries(workData.apps || {}).forEach(([k, v]) => {
+    if (SYSTEM_APPS.test(k)) return;               // pezzi di Windows: contano nel totale, non nella suddivisione
+    const n = friendlyApp(k); merged[n] = (merged[n] || 0) + v;
+  });
   const apps = Object.entries(merged).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 7);
   const max = apps.length ? apps[0][1] : 1;
   let html = `<div class="wk-top"><div class="wk-clock num"><span id="wk-clock">0:00:00</span><small>dal primo movimento alle ${workData.first}</small></div>` +
