@@ -6,7 +6,21 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Oggi">
-<meta name="theme-color" content="#eef2f6">
+<meta name="theme-color" content="#eef2f6" id="theme-color">
+<script>
+// Tema automatico: scuro dal tramonto all'alba (orari presi dal meteo; se mancano, dalle 19 alle 7).
+// Gira subito nell'intestazione, così la pagina non lampeggia in chiaro prima di diventare scura.
+window.autoTheme = function () {
+  var now = new Date(), m = now.getHours() * 60 + now.getMinutes(), rise = 7 * 60, set = 19 * 60;
+  var key = now.getFullYear() + "-" + ("0" + (now.getMonth() + 1)).slice(-2) + "-" + ("0" + now.getDate()).slice(-2);
+  try { var s = JSON.parse(localStorage.getItem("sun")); if (s && s.date === key) { rise = s.rise; set = s.set; } } catch (e) {}
+  var dark = m < rise || m >= set;
+  document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  var tc = document.getElementById("theme-color");
+  if (tc) tc.setAttribute("content", dark ? "#10161d" : "#eef2f6");
+};
+window.autoTheme();
+</script>
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="apple-touch-icon.png">
 <title>Oggi a casa</title>
@@ -16,17 +30,17 @@
 /* Layout: una colonna stretta da telefono — data, scheda meteo, scheda menù */
 :root{
   --bg:#eef2f6; --card:#ffffff; --fg:#17212b; --muted:#5c6b7a; --line:#d9e1e9;
-  --sky:#2f6fb0; --sky-soft:#e1ecf7; --leaf:#3d7a4a; --leaf-soft:#e3f0e4; --sun:#e0a21b; --alert:#9b1c1c;
+  --sky:#2f6fb0; --sky-soft:#e1ecf7; --leaf:#3d7a4a; --leaf-soft:#e3f0e4; --sun:#e0a21b; --alert:#9b1c1c; --night:#a3aebb;
   --display:"Bricolage Grotesque",ui-rounded,system-ui,sans-serif;
   --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#10161d; --card:#18212b; --fg:#e8eef4; --muted:#93a3b3; --line:#2a3644;
-  --sky:#7fb3e6; --sky-soft:#1d2d3e; --leaf:#8cc797; --leaf-soft:#1c2c21; --sun:#f0c04f; --alert:#f28b82; color-scheme:dark}}
+  --sky:#7fb3e6; --sky-soft:#1d2d3e; --leaf:#8cc797; --leaf-soft:#1c2c21; --sun:#f0c04f; --alert:#f28b82; --night:#4a5868; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#10161d; --card:#18212b; --fg:#e8eef4; --muted:#93a3b3; --line:#2a3644;
-  --sky:#7fb3e6; --sky-soft:#1d2d3e; --leaf:#8cc797; --leaf-soft:#1c2c21; --sun:#f0c04f; --alert:#f28b82; color-scheme:dark}
+  --sky:#7fb3e6; --sky-soft:#1d2d3e; --leaf:#8cc797; --leaf-soft:#1c2c21; --sun:#f0c04f; --alert:#f28b82; --night:#4a5868; color-scheme:dark}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 var(--body);-webkit-font-smoothing:antialiased}
 main{max-width:520px;margin:0 auto;padding-block:20px 40px;
@@ -118,6 +132,22 @@ ol.dish li.side{background:transparent;padding:2px 12px;color:var(--muted)}
   @keyframes pingdot{0%{opacity:.7;transform:scale(1)}70%,100%{opacity:0;transform:scale(2.2)}}
 }
 .ag-ev.first .tm,.ag-ev.first .ti strong{color:var(--alert)}
+.ag-ev .ti .cd{display:block;width:fit-content;margin:3px 0 2px;padding:3px 8px;border-radius:99px;border:1px solid var(--alert);color:var(--alert);font:600 .78rem/1.2 var(--body);font-style:normal}
+/* linea del giorno sotto il titolo */
+.daybar{margin-top:28px;max-width:640px}
+.db-track{position:relative;height:8px;border-radius:99px;overflow:visible;
+  background:linear-gradient(to right,var(--night) 0 29.1667%,var(--sky) 29.1667% 95.8333%,var(--night) 95.8333% 100%)}
+.db-future{position:absolute;top:0;bottom:0;right:0;border-radius:0 99px 99px 0;background:var(--bg);opacity:.62}
+.db-dot{position:absolute;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;background:var(--card);border:4px solid var(--sky);box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.db-dot.night{border-color:var(--night)}
+.db-now{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);font:700 .8rem/1 var(--body);color:var(--fg);white-space:nowrap}
+.db-ticks{position:relative;height:14px;margin-top:6px;font:500 .7rem/1 var(--body);color:var(--muted)}
+.db-ticks span{position:absolute;transform:translateX(-50%)}
+.db-ticks span:first-child{transform:none}
+@media (prefers-reduced-motion:no-preference){
+  .db-dot::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid var(--sky);animation:pingdot 2.4s ease-out infinite}
+  .db-dot.night::after{border-color:var(--night)}
+}
 .sc-list li .bring-tag{flex:none;font:600 .72rem/1 var(--body);padding:4px 8px;border-radius:99px;background:var(--sun);color:#17212b}
 .bring{display:flex;align-items:center;gap:12px;margin:12px 0 0;padding:12px 14px;border-radius:14px;background:var(--sun);color:#17212b}
 .bring svg{width:28px;height:28px;flex:none}
@@ -188,6 +218,10 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
   <header>
     <h1 id="date">Oggi</h1>
     <p>Castelfranco Veneto</p>
+    <div class="daybar" role="img" id="daybar" aria-label="Avanzamento della giornata">
+      <div class="db-track"><span class="db-future" id="db-future"></span><span class="db-dot" id="db-dot"><span class="db-now num" id="db-now"></span></span></div>
+      <div class="db-ticks num"><span style="left:0">0</span><span style="left:29.1667%">7</span><span style="left:50%">12</span><span style="left:66.6667%">16</span><span style="left:75%">18</span><span style="left:95.8333%">23</span></div>
+    </div>
   </header>
 
   <section aria-labelledby="w-h">
@@ -221,7 +255,7 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
     <div id="scout"><p class="status">Carico il calendario…</p></div>
   </section>
 </main>
-<p class="ver">Versione del 3 novembre, 10:15</p>
+<p class="ver">Versione del 3 novembre, 10:55</p>
 
 <script>
 // ---------- sezioni richiudibili (lo stato resta salvato su ogni telefono) ----------
@@ -507,7 +541,7 @@ function renderWeather(w, cached){
 async function loadWeather(){
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}` +
     `&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code` +
-    `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max` +
+    `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset` +
     `&timezone=Europe%2FRome&forecast_days=5`;
   try {
     const res = await fetch(url);
@@ -515,6 +549,12 @@ async function loadWeather(){
     const w = await res.json();
     w._fetched = Date.now();
     try { localStorage.setItem("meteo", JSON.stringify(w)); } catch(e){}
+    // alba e tramonto di oggi per il tema automatico
+    if (w.daily.sunrise && w.daily.sunset) {
+      const hm = t => { const [h, m] = t.slice(11, 16).split(":").map(Number); return h * 60 + m; };
+      try { localStorage.setItem("sun", JSON.stringify({ date: w.daily.time[0], rise: hm(w.daily.sunrise[0]), set: hm(w.daily.sunset[0]) })); } catch(e){}
+      window.autoTheme();
+    }
     renderWeather(w, false);
   } catch(e) {
     let saved = null;
@@ -690,7 +730,27 @@ try {
   else agendaKey = localStorage.getItem("agendaKey");
 } catch(_) {}
 
+// conto alla rovescia per l'evento in rosso: "tra 2 h 15 min", "domani alle 18:30", "in corso · finisce tra 40 min"
+function countdown(e, now){
+  const [y, m, d] = e.date.split("-").map(Number);
+  const at = (hm, dateKey) => { const [Y, M, D] = (dateKey || e.date).split("-").map(Number); const [h, mi] = hm.split(":").map(Number); return new Date(Y, M - 1, D, h, mi); };
+  const fmt = ms => {
+    const min = Math.max(1, Math.ceil(ms / 60000));
+    if (min < 60) return `${min} min`;
+    const h = Math.floor(min / 60), r = min % 60;
+    return r ? `${h} h ${r} min` : `${h} h`;
+  };
+  const dayDiff = Math.round((new Date(y, m - 1, d) - today) / 864e5);
+  if (e.allDay) return dayDiff <= 0 ? "oggi" : dayDiff === 1 ? "domani" : `tra ${dayDiff} giorni`;
+  const start = at(e.start);
+  if (start <= now) return e.end ? `in corso · finisce tra ${fmt(at(e.end, e.endDate) - now)}` : "in corso";
+  const ms = start - now;
+  if (ms < 24 * 36e5) return `tra ${fmt(ms)}`;
+  return dayDiff === 1 ? `domani alle ${e.start}` : `tra ${dayDiff} giorni`;
+}
+let lastAgenda = null;
 function renderAgenda(data, cached){
+  lastAgenda = { data, cached };
   const box = document.getElementById("agenda");
   const byDay = {};
   data.events.forEach(e => (byDay[e.date] = byDay[e.date] || []).push(e));
@@ -718,7 +778,8 @@ function renderAgenda(data, cached){
       const tm = e.allDay
         ? `<div class="tm all">${e.part ? "giorno " + e.part : "giornata"}</div>`
         : `<div class="tm num">${e.start}${e.end ? `<span>→ ${e.end}</span>` : ""}</div>`;
-      html += `<div class="${cls}">${tm}<div class="ti"><strong>${esc(e.title)}</strong>${e.location ? `<span>${esc(e.location)}</span>` : ""}</div></div>`;
+      const cd = e === firstEv ? `<em class="cd num">${countdown(e, now)}</em>` : "";
+      html += `<div class="${cls}">${tm}<div class="ti"><strong>${esc(e.title)}</strong>${cd}${e.location ? `<span>${esc(e.location)}</span>` : ""}</div></div>`;
     });
     html += `</div>`;
   }
@@ -755,6 +816,27 @@ loadAgenda();
 renderSchool();
 // ogni minuto aggiorna materia in corso e pallino
 setInterval(() => { if (document.visibilityState === "visible") renderSchool(); }, 60 * 1000);
+
+// ---------- linea del giorno (00–24) ----------
+function updateDayBar(){
+  const now = new Date(), min = now.getHours() * 60 + now.getMinutes();
+  const pct = min / 1440 * 100;
+  document.getElementById("db-dot").style.left = pct + "%";
+  document.getElementById("db-dot").classList.toggle("night", min < 7 * 60 || min >= 23 * 60);
+  document.getElementById("db-future").style.left = pct + "%";
+  const hm = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+  document.getElementById("db-now").textContent = hm;
+  document.getElementById("db-now").style.transform = pct < 6 ? "translateX(-8px)" : pct > 94 ? "translateX(calc(-100% + 8px))" : "translateX(-50%)";
+  document.getElementById("daybar").setAttribute("aria-label", `Sono le ${hm}: passato il ${Math.round(pct)}% della giornata`);
+}
+updateDayBar();
+// ogni 30 secondi: pallino della giornata e conto alla rovescia dell'agenda
+setInterval(() => {
+  if (document.visibilityState !== "visible") return;
+  window.autoTheme();
+  updateDayBar();
+  if (lastAgenda) renderAgenda(lastAgenda.data, lastAgenda.cached);
+}, 30 * 1000);
 
 // ---------- impaginazione a griglia su schermi larghi ----------
 // ogni riquadro va nella colonna più corta, nell'ordine della pagina, così la finestra si riempie senza buchi.
