@@ -150,6 +150,12 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
 .more:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
 .src{font-size:.8rem;color:var(--muted);margin:10px 0 0}
 .src a{color:var(--sky)}
+/* schermi larghi (PC): riquadri affiancati a griglia "a muratura", in ordine da sinistra a destra */
+@media (min-width:900px){
+  main{max-width:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));grid-auto-rows:4px;column-gap:16px;row-gap:0;align-items:start;
+    padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+  main > header{grid-column:1/-1}
+}
 @media (prefers-reduced-motion:no-preference){section{animation:in .35s ease both}section+section{animation-delay:.06s}
 @keyframes in{from{transform:translateY(6px)}to{transform:none}}}
 </style>
@@ -686,6 +692,40 @@ async function loadAgenda(){
 }
 loadAgenda();
 renderSchool();
+
+// ---------- impaginazione a griglia su schermi larghi ----------
+// ogni riquadro va nella colonna più corta, nell'ordine della pagina, così la finestra si riempie senza buchi.
+// La griglia ha righe da 4px: un riquadro alto 300px occupa ~79 righe.
+const wide = matchMedia("(min-width: 900px)");
+let layoutQueued = false;
+function layoutGrid(){
+  layoutQueued = false;
+  const main = document.querySelector("main");
+  const items = [...document.querySelectorAll("main > header, main > section")];
+  if (!wide.matches) { items.forEach(el => { el.style.gridColumn = ""; el.style.gridRow = ""; }); return; }
+  const cols = getComputedStyle(main).gridTemplateColumns.split(" ").filter(Boolean).length || 1;
+  const span = el => Math.ceil((el.getBoundingClientRect().height + 16) / 4);   // 16px = spazio tra i riquadri
+  const header = items.shift();
+  const hs = span(header);
+  header.style.gridRow = `1 / span ${hs}`;
+  const heights = Array(cols).fill(hs);
+  items.forEach(el => {
+    if (el.hidden) { el.style.gridColumn = ""; el.style.gridRow = ""; return; }
+    const c = heights.indexOf(Math.min(...heights));
+    const s = span(el);
+    el.style.gridColumn = String(c + 1);
+    el.style.gridRow = `${heights[c] + 1} / span ${s}`;
+    heights[c] += s;
+  });
+}
+const queueLayout = () => { if (!layoutQueued) { layoutQueued = true; requestAnimationFrame(layoutGrid); } };
+if ("ResizeObserver" in window) {
+  const ro = new ResizeObserver(queueLayout);
+  document.querySelectorAll("main > header, main > section").forEach(el => ro.observe(el));
+}
+wide.addEventListener ? wide.addEventListener("change", queueLayout) : wide.addListener(queueLayout);
+window.addEventListener("resize", queueLayout);
+queueLayout();
 
 // aggiorna ogni 30 minuti e quando si riapre la pagina
 setInterval(() => { loadWeather(); loadScout(); loadAgenda(); }, 30 * 60 * 1000);
