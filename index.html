@@ -100,6 +100,25 @@ ol.dish li:first-child{font-weight:600;font-size:1.08rem}
 ol.dish li.side{background:transparent;padding:2px 12px;color:var(--muted)}
 .snack{margin:14px 0 0;font-size:.88rem;color:var(--muted);border-top:1px dashed var(--line);padding-top:12px}
 .note{margin:12px 0 0;font-size:.85rem;padding:10px 12px;border-radius:12px;border:1px solid var(--sun)}
+/* lavoro */
+.wk-top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.wk-clock{font:700 2.6rem/1 var(--display);letter-spacing:-.02em}
+.wk-clock small{display:block;font:500 .8rem/1.3 var(--body);color:var(--muted);letter-spacing:0;margin-top:4px}
+.wk-state{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border-radius:99px;font:600 .82rem/1 var(--body);background:var(--leaf-soft);color:var(--leaf)}
+.wk-state i{width:8px;height:8px;border-radius:50%;background:currentColor;position:relative}
+.wk-state.idle{background:var(--sky-soft);color:var(--muted)}
+.wk-stats{display:flex;flex-wrap:wrap;gap:6px 16px;margin:14px 0 0;padding:10px 12px;background:var(--sky-soft);border-radius:12px;font-size:.9rem}
+.wk-stats b{font-weight:600}
+.wk-pauses{list-style:none;margin:10px 0 0;padding:0;font-size:.88rem;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.wk-apps{margin:14px 0 0;display:flex;flex-direction:column;gap:9px}
+.wk-app{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;font-size:.9rem}
+.wk-app .n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.wk-app .t{color:var(--muted)}
+.wk-app .bar{grid-column:1/-1;height:6px;border-radius:99px;background:var(--sky-soft);overflow:hidden}
+.wk-app .bar span{display:block;height:100%;border-radius:99px;background:var(--sky)}
+@media (prefers-reduced-motion:no-preference){
+  .wk-state:not(.idle) i::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2px solid currentColor;animation:pingdot 2.4s ease-out infinite}
+}
 /* scuola */
 .sc-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
 .sc-tabs button{border:0;background:transparent;color:var(--muted);font:600 .85rem/1 var(--body);padding:9px 0;border-radius:10px;cursor:pointer}
@@ -234,6 +253,11 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
     <div id="agenda"><p class="status">Carico gli appuntamenti…</p></div>
   </section>
 
+  <section aria-labelledby="l-h" id="work-box" hidden>
+    <h2 class="eyebrow" id="l-h"><span>Lavoro al PC</span><span id="l-upd" class="num"></span></h2>
+    <div id="work"><p class="status">Carico il tempo di lavoro…</p></div>
+  </section>
+
   <section aria-labelledby="c-h">
     <h2 class="eyebrow" id="c-h"><span>4ªB Antonio</span><span>Orario scolastico</span></h2>
     <div class="sc-tabs" id="sc-tabs"></div>
@@ -255,7 +279,7 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
     <div id="scout"><p class="status">Carico il calendario…</p></div>
   </section>
 </main>
-<p class="ver">Versione del 3 novembre, 10:55</p>
+<p class="ver">Versione del 3 novembre, 11:30</p>
 
 <script>
 // ---------- sezioni richiudibili (lo stato resta salvato su ogni telefono) ----------
@@ -813,6 +837,73 @@ async function loadAgenda(){
   }
 }
 loadAgenda();
+
+// ---------- lavoro al PC (dati mandati dallo script sul PC al Worker) ----------
+const WORK_RUNNING_MIN = 30;           // oltre mezz'ora senza attività il cronometro si ferma
+let workData = null;
+const fmtMin = m => m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")}`;
+const hmToDate = hm => { const [h, m] = hm.split(":").map(Number); const d = new Date(today); d.setHours(h, m, 0, 0); return d; };
+
+function workStatus(){
+  const now = new Date();
+  const first = hmToDate(workData.first), last = hmToDate(workData.last || workData.first);
+  const sinceLast = (now - last) / 60000;
+  const running = sinceLast <= WORK_RUNNING_MIN;
+  return { now, first, last, running, end: running ? now : last };
+}
+function tickWork(){
+  if (!workData || workData.empty || !workData.first) return;
+  const st = workStatus();
+  const sec = Math.max(0, Math.floor((st.end - st.first) / 1000));
+  const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+  const el = document.getElementById("wk-clock");
+  if (el) el.textContent = `${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+  setSummary("l-h", st.running ? `Dalle ${workData.first} · ${fmtMin(Math.floor(sec / 60))}` : `${workData.first}–${workData.last} · ${fmtMin(Math.floor(sec / 60))}`);
+}
+function renderWork(){
+  const box = document.getElementById("work");
+  if (!workData || workData.empty || !workData.first || workData.date !== isoKey(today)) {
+    box.innerHTML = `<p class="status">Oggi il PC non ha ancora registrato attività.</p>`;
+    setSummary("l-h", "Nessuna attività oggi");
+    return;
+  }
+  const st = workStatus();
+  const pauses = workData.pauses || [];
+  const pauseMin = pauses.reduce((a, p) => a + Math.max(0, (hmToDate(p.to) - hmToDate(p.from)) / 60000), 0);
+  const apps = Object.entries(workData.apps || {}).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 7);
+  const max = apps.length ? apps[0][1] : 1;
+  let html = `<div class="wk-top"><div class="wk-clock num"><span id="wk-clock">0:00:00</span><small>dal primo movimento alle ${workData.first}</small></div>` +
+    (st.running ? `<span class="wk-state"><i></i>in corso</span>` : `<span class="wk-state idle"><i></i>fermo dalle ${workData.last}</span>`) + `</div>`;
+  html += `<div class="wk-stats num"><span>Inizio <b>${workData.first}</b></span><span>Attivo <b>${fmtMin(workData.activeMin || 0)}</b></span>` +
+    `<span>Pause <b>${pauses.length ? fmtMin(Math.round(pauseMin)) : "nessuna"}</b></span></div>`;
+  if (pauses.length) html += `<ul class="wk-pauses num">${pauses.map(p => `<li>Pausa ${p.from}–${p.to} · ${fmtMin(Math.round((hmToDate(p.to) - hmToDate(p.from)) / 60000))}</li>`).join("")}</ul>`;
+  if (apps.length) {
+    html += `<div class="wk-apps">`;
+    apps.forEach(([name, min]) => {
+      html += `<div class="wk-app"><span class="n">${esc(name)}</span><span class="t num">${fmtMin(min)}</span><span class="bar"><span style="width:${Math.max(3, min / max * 100).toFixed(1)}%"></span></span></div>`;
+    });
+    html += `</div>`;
+  }
+  box.innerHTML = html;
+  if (workData.received) document.getElementById("l-upd").textContent = "agg. " + new Date(workData.received).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
+  tickWork();
+}
+async function loadWork(){
+  if (!AGENDA_URL || !agendaKey) return;            // come l'agenda: solo con la chiave
+  document.getElementById("work-box").hidden = false;
+  try {
+    const res = await fetch(`${AGENDA_URL}/work?k=${encodeURIComponent(agendaKey)}`);
+    if (!res.ok) throw new Error(res.status);
+    workData = await res.json();
+  } catch(e) {
+    if (!workData) { document.getElementById("work").innerHTML = `<p class="err">Non riesco a leggere il tempo di lavoro. Riprova tra poco.</p>`; return; }
+  }
+  renderWork();
+}
+loadWork();
+setInterval(() => { if (document.visibilityState === "visible") loadWork(); }, 2 * 60 * 1000);
+setInterval(() => { if (document.visibilityState === "visible") tickWork(); }, 1000);
+
 renderSchool();
 // ogni minuto aggiorna materia in corso e pallino
 setInterval(() => { if (document.visibilityState === "visible") renderSchool(); }, 60 * 1000);
@@ -874,11 +965,11 @@ window.addEventListener("resize", queueLayout);
 queueLayout();
 
 // aggiorna ogni 30 minuti e quando si riapre la pagina
-setInterval(() => { loadWeather(); loadScout(); loadAgenda(); }, 30 * 60 * 1000);
+setInterval(() => { loadWeather(); loadScout(); loadAgenda(); loadWork(); }, 30 * 60 * 1000);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") {
     if (startOfDay(new Date()).getTime() !== today.getTime()) location.reload();
-    else { loadWeather(); loadScout(); loadAgenda(); }
+    else { loadWeather(); loadScout(); loadAgenda(); loadWork(); }
   }
 });
 </script>
