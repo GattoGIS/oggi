@@ -16,17 +16,17 @@
 /* Layout: una colonna stretta da telefono — data, scheda meteo, scheda menù */
 :root{
   --bg:#eef2f6; --card:#ffffff; --fg:#17212b; --muted:#5c6b7a; --line:#d9e1e9;
-  --sky:#2f6fb0; --sky-soft:#e1ecf7; --leaf:#3d7a4a; --leaf-soft:#e3f0e4; --sun:#e0a21b;
+  --sky:#2f6fb0; --sky-soft:#e1ecf7; --leaf:#3d7a4a; --leaf-soft:#e3f0e4; --sun:#e0a21b; --alert:#9b1c1c;
   --display:"Bricolage Grotesque",ui-rounded,system-ui,sans-serif;
   --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#10161d; --card:#18212b; --fg:#e8eef4; --muted:#93a3b3; --line:#2a3644;
-  --sky:#7fb3e6; --sky-soft:#1d2d3e; --leaf:#8cc797; --leaf-soft:#1c2c21; --sun:#f0c04f; color-scheme:dark}}
+  --sky:#7fb3e6; --sky-soft:#1d2d3e; --leaf:#8cc797; --leaf-soft:#1c2c21; --sun:#f0c04f; --alert:#f28b82; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#10161d; --card:#18212b; --fg:#e8eef4; --muted:#93a3b3; --line:#2a3644;
-  --sky:#7fb3e6; --sky-soft:#1d2d3e; --leaf:#8cc797; --leaf-soft:#1c2c21; --sun:#f0c04f; color-scheme:dark}
+  --sky:#7fb3e6; --sky-soft:#1d2d3e; --leaf:#8cc797; --leaf-soft:#1c2c21; --sun:#f0c04f; --alert:#f28b82; color-scheme:dark}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 var(--body);-webkit-font-smoothing:antialiased}
 main{max-width:520px;margin:0 auto;padding-block:20px 40px;
@@ -94,11 +94,30 @@ ol.dish li.side{background:transparent;padding:2px 12px;color:var(--muted)}
 .sc-tabs button:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
 .sc-list{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
 .sc-list li{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--sky-soft)}
-.sc-list li .h{flex:none;min-width:2.2rem;font:600 .78rem/1 var(--body);color:var(--muted)}
+.sc-list li .h{flex:none;min-width:2.6rem;font:600 .78rem/1 var(--body);color:var(--muted)}
 .sc-list li .s{flex:1;min-width:0;font-weight:600}
 .sc-list li .x{flex:none;font:600 .75rem/1 var(--body);color:var(--sky)}
 .sc-list li.lunch{background:transparent;border:1px dashed var(--line);font-weight:400}
 .sc-list li.lunch .s{font-weight:400;color:var(--muted)}
+.sc-wrap{position:relative;margin-top:12px}
+.sc-wrap .sc-list{margin-top:0}
+.sc-wrap.live{padding-left:24px}
+.sc-line{display:none;position:absolute;left:7px;top:6px;bottom:6px;width:2px;border-radius:2px;background:var(--line)}
+.sc-wrap.live .sc-line{display:block}
+.sc-fill{position:absolute;left:0;top:0;width:2px;border-radius:2px;background:var(--sky)}
+.sc-dot{position:absolute;left:-5px;width:12px;height:12px;margin-top:-6px;border-radius:50%;background:var(--sky);box-shadow:0 0 0 3px var(--card)}
+.sc-list li.done{opacity:.4}
+.sc-list li.current{position:relative;box-shadow:0 0 0 2px var(--sky)}
+.sc-list li.current .h{color:var(--sky)}
+@media (prefers-reduced-motion:no-preference){
+  .sc-list li.current::after,.sc-dot::after{content:"";position:absolute;pointer-events:none;border:2px solid var(--sky);animation:ping 2.4s ease-out infinite}
+  .sc-list li.current::after{inset:-2px;border-radius:14px}
+  .sc-dot::after{inset:-2px;border-radius:50%}
+  @keyframes ping{0%{opacity:.6;transform:scale(1)}70%,100%{opacity:0;transform:scale(1.06)}}
+  .sc-dot::after{animation-name:pingdot}
+  @keyframes pingdot{0%{opacity:.7;transform:scale(1)}70%,100%{opacity:0;transform:scale(2.2)}}
+}
+.ag-ev.first .tm,.ag-ev.first .ti strong{color:var(--alert)}
 .sc-list li .bring-tag{flex:none;font:600 .72rem/1 var(--body);padding:4px 8px;border-radius:99px;background:var(--sun);color:#17212b}
 .bring{display:flex;align-items:center;gap:12px;margin:12px 0 0;padding:12px 14px;border-radius:14px;background:var(--sun);color:#17212b}
 .bring svg{width:28px;height:28px;flex:none}
@@ -202,7 +221,7 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
     <div id="scout"><p class="status">Carico il calendario…</p></div>
   </section>
 </main>
-<p class="ver">Versione del 3 novembre, 09:15</p>
+<p class="ver">Versione del 3 novembre, 10:15</p>
 
 <script>
 // ---------- sezioni richiudibili (lo stato resta salvato su ogni telefono) ----------
@@ -358,20 +377,45 @@ const SCHOOL_BRING = {
   2: [{ item: "Flauto", subject: "Musica" }],
   3: [{ item: "Tuta", subject: "Educazione fisica" }]
 };
-const BAG_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7V5a4 4 0 0 1 8 0v2"/><rect x="4" y="7" width="16" height="14" rx="3"/><path d="M4 13h16M10 13v2h4v-2"/></svg>`;
+// orari dei 7 spazi (8 confini): 4 ore al mattino, mensa, 2 ore al pomeriggio — DA VERIFICARE con la scuola
+const SCHOOL_TIMES = ["08:00","09:00","10:00","11:00","12:00","14:00","15:00","16:00"];
+const toMin = hm => { const [h, m] = hm.split(":").map(Number); return h * 60 + m; };
+const BAG_ICON =`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7V5a4 4 0 0 1 8 0v2"/><rect x="4" y="7" width="16" height="14" rx="3"/><path d="M4 13h16M10 13v2h4v-2"/></svg>`;
 // dalle 16 in poi mostra già il giorno di scuola successivo (per preparare lo zaino)
 function nextSchoolDay(d){ do { d = addDays(d, 1); } while (d.getDay() === 0 || d.getDay() === 6); return d; }
 const schoolDefault = (today.getDay() >= 1 && today.getDay() <= 5 && new Date().getHours() < 16) ? today : nextSchoolDay(today);
 let schoolSel = (schoolDefault.getDay() + 6) % 7;
 
 function schoolBlocks(day){
-  // unisce le ore uguali consecutive: "Italiano ×2"
+  // unisce le ore uguali consecutive: "Italiano ×2", con orario di inizio e fine
   const out = [];
-  day.forEach(s => {
+  day.forEach((s, i) => {
     const last = out[out.length - 1];
-    if (last && last.s === s) last.n++; else out.push({ s, n: 1 });
+    if (last && last.s === s) { last.n++; last.end = SCHOOL_TIMES[i + 1]; }
+    else out.push({ s, n: 1, start: SCHOOL_TIMES[i], end: SCHOOL_TIMES[i + 1] });
   });
   return out;
+}
+// pallino sulla linea del tempo, alla stessa altezza dell'ora attuale
+function placeSchoolDot(){
+  const wrap = document.querySelector(".sc-wrap.live");
+  if (!wrap) return;
+  const items = [...wrap.querySelectorAll(".sc-list li")];
+  const now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes();
+  const top0 = wrap.getBoundingClientRect().top;
+  let y;
+  const first = items[0], last = items[items.length - 1];
+  if (nowMin < +first.dataset.start) y = first.getBoundingClientRect().top - top0 + 6;
+  else if (nowMin >= +last.dataset.end) y = last.getBoundingClientRect().bottom - top0 - 6;
+  else {
+    const li = items.find(l => nowMin >= +l.dataset.start && nowMin < +l.dataset.end) || last;
+    const r = li.getBoundingClientRect();
+    const f = (nowMin - li.dataset.start) / (li.dataset.end - li.dataset.start);
+    y = r.top - top0 + f * r.height;
+  }
+  const line = wrap.querySelector(".sc-line"), lineTop = line.offsetTop;
+  wrap.querySelector(".sc-dot").style.top = (y - lineTop) + "px";
+  wrap.querySelector(".sc-fill").style.height = Math.max(0, y - lineTop) + "px";
 }
 function renderSchool(){
   const tabs = document.getElementById("sc-tabs");
@@ -389,14 +433,21 @@ function renderSchool(){
   const bring = SCHOOL_BRING[schoolSel] || [];
   let html = `<p class="when">${rel}${rel ? DAYS_LONG[schoolSel + 1].toLowerCase() : DAYS_LONG[schoolSel + 1]}</p>`;
   if (bring.length) html += `<div class="bring">${BAG_ICON}<div><small>Da portare</small><strong>${bring.map(b => esc(b.item)).join(", ")}</strong></div></div>`;
-  html += `<ul class="sc-list">`;
+  // "in diretta" solo se si guarda il giorno di oggi ed è un giorno di scuola
+  const live = today.getDay() >= 1 && today.getDay() <= 5 && (today.getDay() + 6) % 7 === schoolSel &&
+    startOfDay(new Date()).getTime() === today.getTime();
+  const now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes();
+  html += `<div class="sc-wrap${live ? " live" : ""}"><div class="sc-line"><span class="sc-fill"></span><span class="sc-dot"></span></div><ul class="sc-list">`;
   schoolBlocks(SCHOOL[schoolSel]).forEach(b => {
     const lunch = b.s.startsWith("Mensa");
     const tag = bring.find(x => x.subject === b.s);
-    html += `<li class="${lunch ? "lunch" : ""}"><span class="s">${esc(b.s)}</span>${tag ? `<span class="bring-tag">${esc(tag.item)}</span>` : ""}${b.n > 1 ? `<span class="x">${b.n} ore</span>` : ""}</li>`;
+    const st = toMin(b.start), en = toMin(b.end);
+    const cls = [lunch ? "lunch" : "", live && en <= nowMin ? "done" : "", live && st <= nowMin && nowMin < en ? "current" : ""].join(" ").trim();
+    html += `<li class="${cls}" data-start="${st}" data-end="${en}"><span class="h num">${b.start}</span><span class="s">${esc(b.s)}</span>${tag ? `<span class="bring-tag">${esc(tag.item)}</span>` : ""}${b.n > 1 ? `<span class="x">${b.n} ore</span>` : ""}</li>`;
   });
-  html += `</ul>`;
+  html += `</ul></div>`;
   document.getElementById("school").innerHTML = html;
+  if (live) requestAnimationFrame(placeSchoolDot);
 
   const sd = SCHOOL[(schoolDefault.getDay() + 6) % 7];
   const label = schoolDefault.getTime() === today.getTime() ? "Oggi" : schoolDefault.getTime() === addDays(today,1).getTime() ? "Domani" : DAYS[(schoolDefault.getDay() + 6) % 7];
@@ -589,21 +640,21 @@ function renderScout(events, live){
     ${md.tbc ? `<div class="chips"><span class="chip tbc">da confermare</span></div>` : ""}</div></div>`;
 
   const rest = upcoming.filter(e => e !== main);
-  const shown = scoutShowAll ? rest : rest.slice(0, 5);
+  const shown = scoutShowAll ? rest : rest.slice(0, 3);
   if (shown.length) {
     html += `<ul class="list">`;
     shown.forEach(e => {
       const x = info(e);
       // più è lontana, più è trasparente: piena entro 7 giorni, poi sfuma fino al 35% a 2 mesi
       const days = Math.round((e.d - today) / 864e5);
-      const fade = Math.max(0.35, Math.min(1, 1 - (days - 7) / 53 * 0.65)).toFixed(2);
+      const fade = Math.max(0.2, Math.min(0.85, 0.85 - (days - 7) / 30 * 0.65)).toFixed(2);
       html += `<li class="${x.off ? "off" : ""}" style="opacity:${fade}"><span class="when2 num">${rangeLabel(e)}</span><span class="txt">` +
         (x.off ? `<span class="off-badge">Niente attività</span>` :
           `${esc(x.title)}${x.time ? `<span class="time num">${x.time}</span>` : ""}${x.place ? `<span class="place">· ${esc(x.place)}</span>` : ""}${x.tbc ? ` <span class="chip tbc">da confermare</span>` : ""}`) +
         `</span></li>`;
     });
     html += `</ul>`;
-    if (rest.length > 5) html += `<button type="button" class="more" id="scout-more">${scoutShowAll ? "Mostra meno" : `Mostra tutte (${rest.length})`}</button>`;
+    if (rest.length > 3) html += `<button type="button" class="more" id="scout-more">${scoutShowAll ? "Mostra meno" : `Mostra tutte (${rest.length})`}</button>`;
   }
   html += `<p class="src">${live ? "Dal calendario dei capi, aggiornato in automatico." : "Copia salvata: il foglio dei capi non risponde ora."} <a href="${SHEET_URL}" target="_blank" rel="noopener">Apri il foglio</a></p>`;
   box.innerHTML = html;
@@ -645,6 +696,10 @@ function renderAgenda(data, cached){
   data.events.forEach(e => (byDay[e.date] = byDay[e.date] || []).push(e));
   const now = new Date();
   const nowHM = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+  // il primo evento non ancora concluso (preferendo quelli con un orario) va in rosso scuro
+  const upcoming = data.events.filter(e => e.date > isoKey(today) || e.allDay || !e.end || e.endDate || e.end > nowHM)
+    .filter(e => e.date >= isoKey(today));
+  const firstEv = upcoming.find(e => !e.allDay) || upcoming[0];
   let html = "";
   for (let i = 0; i < AGENDA_DAYS; i++) {
     const d = addDays(today, i), key = isoKey(d), list = byDay[key] || [];
@@ -659,6 +714,7 @@ function renderAgenda(data, cached){
         if (e.end && e.end <= nowHM && !e.endDate) cls += " past";
         else if (e.start <= nowHM) cls += " now";
       }
+      if (e === firstEv) cls += " first";
       const tm = e.allDay
         ? `<div class="tm all">${e.part ? "giorno " + e.part : "giornata"}</div>`
         : `<div class="tm num">${e.start}${e.end ? `<span>→ ${e.end}</span>` : ""}</div>`;
@@ -697,6 +753,8 @@ async function loadAgenda(){
 }
 loadAgenda();
 renderSchool();
+// ogni minuto aggiorna materia in corso e pallino
+setInterval(() => { if (document.visibilityState === "visible") renderSchool(); }, 60 * 1000);
 
 // ---------- impaginazione a griglia su schermi larghi ----------
 // ogni riquadro va nella colonna più corta, nell'ordine della pagina, così la finestra si riempie senza buchi.
@@ -723,6 +781,7 @@ function layoutGrid(){
     heights[c] += s;
   });
 }
+window.addEventListener("resize", () => requestAnimationFrame(placeSchoolDot));
 const queueLayout = () => { if (!layoutQueued) { layoutQueued = true; requestAnimationFrame(layoutGrid); } };
 if ("ResizeObserver" in window) {
   const ro = new ResizeObserver(queueLayout);
