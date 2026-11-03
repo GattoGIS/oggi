@@ -36,6 +36,17 @@ header h1{font:700 2rem/1.1 var(--display);margin:0;text-wrap:balance;letter-spa
 header p{margin:4px 0 0;color:var(--muted)}
 section{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px}
 .eyebrow{font:600 .72rem/1 var(--body);text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 12px;display:flex;justify-content:space-between;gap:8px}
+/* sezioni richiudibili */
+.sec-toggle{display:flex;align-items:center;gap:8px;width:100%;min-height:28px;margin:-6px 0;padding:6px 0;background:none;border:0;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.sec-toggle:focus-visible{outline:2px solid var(--sky);outline-offset:4px;border-radius:6px}
+.sec-toggle .sec-title{flex:1;min-width:0}
+.sec-toggle .chev{width:14px;height:14px;flex:none;transition:transform .2s ease}
+.sec-sum{display:none;min-width:0;max-width:62%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:none;letter-spacing:0;font:600 .9rem/1.2 var(--body);color:var(--fg)}
+section.collapsed .eyebrow{margin:0}
+section.collapsed .sec-body,section.collapsed .sec-meta{display:none}
+section.collapsed .sec-sum{display:block}
+section.collapsed .chev{transform:rotate(-90deg)}
+@media (prefers-reduced-motion:reduce){.sec-toggle .chev{transition:none}}
 .num{font-variant-numeric:tabular-nums}
 
 /* meteo */
@@ -74,6 +85,20 @@ ol.dish li:first-child{font-weight:600;font-size:1.08rem}
 ol.dish li.side{background:transparent;padding:2px 12px;color:var(--muted)}
 .snack{margin:14px 0 0;font-size:.88rem;color:var(--muted);border-top:1px dashed var(--line);padding-top:12px}
 .note{margin:12px 0 0;font-size:.85rem;padding:10px 12px;border-radius:12px;border:1px solid var(--sun)}
+/* scuola */
+.sc-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.sc-tabs button{border:0;background:transparent;color:var(--muted);font:600 .85rem/1 var(--body);padding:9px 0;border-radius:10px;cursor:pointer}
+.sc-tabs button.today{color:var(--sky)}
+.sc-tabs button[aria-pressed="true"]{background:var(--sky);color:var(--card)}
+.sc-tabs button:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
+.sc-list{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.sc-list li{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--sky-soft)}
+.sc-list li .h{flex:none;min-width:2.2rem;font:600 .78rem/1 var(--body);color:var(--muted)}
+.sc-list li .s{flex:1;min-width:0;font-weight:600}
+.sc-list li .x{flex:none;font:600 .75rem/1 var(--body);color:var(--sky)}
+.sc-list li.lunch{background:transparent;border:1px dashed var(--line);font-weight:400}
+.sc-list li.lunch .s{font-weight:400;color:var(--muted)}
+.sc-list li.pe .s::after{content:"tuta";margin-left:8px;font:600 .7rem/1 var(--body);padding:3px 7px;border-radius:99px;border:1px solid var(--sun);color:var(--fg);vertical-align:2px}
 /* agenda */
 .ag-day{display:flex;flex-direction:column}
 .ag-day + .ag-day{margin-top:14px}
@@ -150,6 +175,12 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
     <div id="menu"></div>
   </section>
 
+  <section aria-labelledby="c-h">
+    <h2 class="eyebrow" id="c-h"><span>Scuola · 4ª</span><span>Orario</span></h2>
+    <div class="sc-tabs" id="sc-tabs"></div>
+    <div id="school"></div>
+  </section>
+
   <section aria-labelledby="s-h">
     <h2 class="eyebrow" id="s-h"><span>Scout · Branco</span><span id="s-upd"></span></h2>
     <div id="scout"><p class="status">Carico il calendario…</p></div>
@@ -157,6 +188,40 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
 </main>
 
 <script>
+// ---------- sezioni richiudibili (lo stato resta salvato su ogni telefono) ----------
+let collapsed = [];
+try { collapsed = JSON.parse(localStorage.getItem("collapsed")) || []; } catch(_) {}
+const CHEV = `<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`;
+document.querySelectorAll("main > section").forEach(sec => {
+  const h = sec.querySelector("h2.eyebrow");
+  const key = h.id;
+  const [title, meta] = h.querySelectorAll(":scope > span");
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "sec-toggle";
+  btn.innerHTML = CHEV;
+  title.classList.add("sec-title"); btn.appendChild(title);
+  if (meta) { meta.classList.add("sec-meta"); btn.appendChild(meta); }
+  const sum = document.createElement("span");
+  sum.className = "sec-sum"; sum.id = key + "-sum";
+  btn.appendChild(sum);
+  h.appendChild(btn);
+  const body = document.createElement("div");
+  body.className = "sec-body"; body.id = key + "-body";
+  while (h.nextSibling) body.appendChild(h.nextSibling);
+  sec.appendChild(body);
+  btn.setAttribute("aria-controls", body.id);
+  const apply = closed => { sec.classList.toggle("collapsed", closed); btn.setAttribute("aria-expanded", String(!closed)); };
+  apply(collapsed.includes(key));
+  btn.onclick = () => {
+    const closed = !sec.classList.contains("collapsed");
+    apply(closed);
+    collapsed = closed ? [...new Set([...collapsed, key])] : collapsed.filter(k => k !== key);
+    try { localStorage.setItem("collapsed", JSON.stringify(collapsed)); } catch(_) {}
+  };
+});
+function setSummary(key, text){ const el = document.getElementById(key + "-sum"); if (el) el.textContent = text; }
+
 // ---------- impostazioni ----------
 const LAT = 45.6717, LON = 11.9268;            // Castelfranco Veneto
 const CYCLE_START = new Date(2026, 8, 28);     // lunedì 28/09/2026 = I settimana
@@ -246,10 +311,66 @@ function renderMenu(){
   const m = selected.getMonth();
   if (m >= 10 || m <= 2) html += `<p class="note">Questo è il menù estivo (aprile–ottobre). Da novembre potrebbe esserci il menù invernale: va aggiornato.</p>`;
   document.getElementById("menu").innerHTML = html;
+
+  // riassunto per la sezione chiusa: primo piatto di oggi (nel weekend, di lunedì)
+  const weekend = today.getDay() === 0 || today.getDay() === 6;
+  const ref = weekend ? addDays(mondayOf(today), 7) : today;
+  const first = MENU[weekIndex(mondayOf(ref))][(ref.getDay() + 6) % 7][0];
+  setSummary("m-h", (weekend ? "Lun: " : "") + first);
 }
 document.getElementById("prev").onclick = () => { selected = addDays(selected, -7); renderMenu(); };
 document.getElementById("next").onclick = () => { selected = addDays(selected, 7); renderMenu(); };
 renderMenu();
+
+// ---------- orario scolastico (4ª elementare) ----------
+// 7 spazi al giorno: 4 al mattino, mensa (con l'insegnante indicata), 2 al pomeriggio
+const SCHOOL = [
+  ["Italiano","Italiano","Storia","Storia","Mensa · Caterina","Inglese / Matematica","Inglese / Matematica"],
+  ["Matematica / Inglese","Matematica / Inglese","Italiano","Italiano","Mensa · Laura","Geografia","Geografia"],
+  ["Italiano","Italiano","Matematica","Matematica","Mensa · Laura","Inglese","Musica"],
+  ["Educazione fisica","Educazione fisica","Italiano","Scienze","Mensa · Laura","Arte","Matematica"],
+  ["Matematica","Matematica","Tecnologia","Italiano","Mensa · Laura","Religione","Religione"]
+];
+// dalle 16 in poi mostra già il giorno di scuola successivo (per preparare lo zaino)
+function nextSchoolDay(d){ do { d = addDays(d, 1); } while (d.getDay() === 0 || d.getDay() === 6); return d; }
+const schoolDefault = (today.getDay() >= 1 && today.getDay() <= 5 && new Date().getHours() < 16) ? today : nextSchoolDay(today);
+let schoolSel = (schoolDefault.getDay() + 6) % 7;
+
+function schoolBlocks(day){
+  // unisce le ore uguali consecutive: "Italiano ×2"
+  const out = [];
+  day.forEach(s => {
+    const last = out[out.length - 1];
+    if (last && last.s === s) last.n++; else out.push({ s, n: 1 });
+  });
+  return out;
+}
+function renderSchool(){
+  const tabs = document.getElementById("sc-tabs");
+  tabs.innerHTML = "";
+  DAYS.forEach((label, i) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.id = "sc-day-" + i; b.textContent = label;
+    b.setAttribute("aria-pressed", i === schoolSel);
+    if (today.getDay() >= 1 && today.getDay() <= 5 && (today.getDay() + 6) % 7 === i) b.classList.add("today");
+    b.onclick = () => { schoolSel = i; renderSchool(); };
+    tabs.appendChild(b);
+  });
+  const isDefault = schoolSel === (schoolDefault.getDay() + 6) % 7;
+  const rel = isDefault ? (schoolDefault.getTime() === today.getTime() ? "Oggi, " : schoolDefault.getTime() === addDays(today,1).getTime() ? "Domani, " : "") : "";
+  let html = `<p class="when">${rel}${rel ? DAYS_LONG[schoolSel + 1].toLowerCase() : DAYS_LONG[schoolSel + 1]}</p><ul class="sc-list">`;
+  schoolBlocks(SCHOOL[schoolSel]).forEach(b => {
+    const lunch = b.s.startsWith("Mensa");
+    const cls = lunch ? "lunch" : b.s === "Educazione fisica" ? "pe" : "";
+    html += `<li class="${cls}"><span class="s">${esc(b.s)}</span>${b.n > 1 ? `<span class="x">${b.n} ore</span>` : ""}</li>`;
+  });
+  html += `</ul>`;
+  document.getElementById("school").innerHTML = html;
+
+  const sd = SCHOOL[(schoolDefault.getDay() + 6) % 7];
+  const label = schoolDefault.getTime() === today.getTime() ? "Oggi" : schoolDefault.getTime() === addDays(today,1).getTime() ? "Domani" : DAYS[(schoolDefault.getDay() + 6) % 7];
+  setSummary("c-h", `${label}: ` + [...new Set(sd.filter(s => !s.startsWith("Mensa")))].join(", "));
+}
 
 // ---------- meteo (Open-Meteo, senza chiave) ----------
 const ICONS = {
@@ -296,6 +417,7 @@ function renderWeather(w, cached){
   document.getElementById("weather").innerHTML = html;
   const up = new Date(w._fetched);
   document.getElementById("w-upd").textContent = "agg. " + up.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
+  setSummary("w-h", `${r(c.temperature_2m)}° · ${desc}`);
 }
 
 async function loadWeather(){
@@ -452,6 +574,7 @@ function renderScout(events, live){
   }
   html += `<p class="src">${live ? "Dal calendario dei capi, aggiornato in automatico." : "Copia salvata: il foglio dei capi non risponde ora."} <a href="${SHEET_URL}" target="_blank" rel="noopener">Apri il foglio</a></p>`;
   box.innerHTML = html;
+  setSummary("s-h", `${rangeLabel(main)}${md.time ? " · " + md.time : ""}${md.place ? " · " + md.place : ""}`);
   const more = document.getElementById("scout-more");
   if (more) more.onclick = () => { scoutShowAll = !scoutShowAll; renderScout(events, live); };
 }
@@ -475,7 +598,7 @@ loadScout();
 
 // ---------- agenda di famiglia (calendario iCloud tramite il Worker Cloudflare) ----------
 // L'indirizzo del Worker è pubblico; la chiave no: arriva dal link salvato sui telefoni (…/oggi/?k=CHIAVE)
-const AGENDA_URL = "";   // es. "https://agenda-casa.tuonome.workers.dev"
+const AGENDA_URL = "https://agenda-casa.frncscgtt.workers.dev";
 const AGENDA_DAYS = 7;
 let agendaKey = new URLSearchParams(location.search).get("k");
 try {
@@ -512,6 +635,10 @@ function renderAgenda(data, cached){
   }
   if (cached) html += `<p class="status">Senza connessione: mostro gli ultimi appuntamenti salvati.</p>`;
   box.innerHTML = html;
+  const todays = (byDay[isoKey(today)] || []).filter(e => e.allDay || !e.end || e.end > nowHM);
+  setSummary("a-h", !todays.length ? "Oggi niente in agenda"
+    : `Oggi ${todays.length === 1 ? "1 impegno" : todays.length + " impegni"}` +
+      (todays.find(e => !e.allDay) ? ` · ${todays.find(e => !e.allDay).start}` : ""));
   document.getElementById("a-upd").textContent = "agg. " + new Date(data.generated).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
 }
 
@@ -536,6 +663,7 @@ async function loadAgenda(){
   }
 }
 loadAgenda();
+renderSchool();
 
 // aggiorna ogni 30 minuti e quando si riapre la pagina
 setInterval(() => { loadWeather(); loadScout(); loadAgenda(); }, 30 * 60 * 1000);
