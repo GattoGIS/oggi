@@ -41,6 +41,7 @@ section{background:var(--card);border:1px solid var(--line);border-radius:18px;p
 .sec-toggle:focus-visible{outline:2px solid var(--sky);outline-offset:4px;border-radius:6px}
 .sec-toggle .sec-title{flex:1;min-width:0}
 .sec-toggle .chev{width:14px;height:14px;flex:none;transition:transform .2s ease}
+.sum-ic svg{width:22px;height:22px;vertical-align:-6px;margin-right:6px}
 .sec-sum{display:none;min-width:0;max-width:62%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:none;letter-spacing:0;font:600 .9rem/1.2 var(--body);color:var(--fg)}
 section.collapsed .eyebrow{margin:0}
 section.collapsed .sec-body,section.collapsed .sec-meta{display:none}
@@ -98,7 +99,12 @@ ol.dish li.side{background:transparent;padding:2px 12px;color:var(--muted)}
 .sc-list li .x{flex:none;font:600 .75rem/1 var(--body);color:var(--sky)}
 .sc-list li.lunch{background:transparent;border:1px dashed var(--line);font-weight:400}
 .sc-list li.lunch .s{font-weight:400;color:var(--muted)}
-.sc-list li.pe .s::after{content:"tuta";margin-left:8px;font:600 .7rem/1 var(--body);padding:3px 7px;border-radius:99px;border:1px solid var(--sun);color:var(--fg);vertical-align:2px}
+.sc-list li .bring-tag{flex:none;font:600 .72rem/1 var(--body);padding:4px 8px;border-radius:99px;background:var(--sun);color:#17212b}
+.bring{display:flex;align-items:center;gap:12px;margin:12px 0 0;padding:12px 14px;border-radius:14px;background:var(--sun);color:#17212b}
+.bring svg{width:28px;height:28px;flex:none}
+.bring div{min-width:0}
+.bring small{display:block;font:600 .72rem/1.2 var(--body);text-transform:uppercase;letter-spacing:.08em;opacity:.75}
+.bring strong{font:700 1.2rem/1.2 var(--display)}
 /* agenda */
 .ag-day{display:flex;flex-direction:column}
 .ag-day + .ag-day{margin-top:14px}
@@ -165,6 +171,12 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
     <div id="agenda"><p class="status">Carico gli appuntamenti…</p></div>
   </section>
 
+  <section aria-labelledby="c-h">
+    <h2 class="eyebrow" id="c-h"><span>4ªB Antonio</span><span>Orario scolastico</span></h2>
+    <div class="sc-tabs" id="sc-tabs"></div>
+    <div id="school"></div>
+  </section>
+
   <section aria-labelledby="m-h">
     <h2 class="eyebrow" id="m-h"><span>Menù del nido</span><span>Salvarosa · Primavera</span></h2>
     <div class="picker">
@@ -173,12 +185,6 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
       <button id="next" aria-label="Settimana successiva">›</button>
     </div>
     <div id="menu"></div>
-  </section>
-
-  <section aria-labelledby="c-h">
-    <h2 class="eyebrow" id="c-h"><span>Scuola · 4ª</span><span>Orario</span></h2>
-    <div class="sc-tabs" id="sc-tabs"></div>
-    <div id="school"></div>
   </section>
 
   <section aria-labelledby="s-h">
@@ -220,7 +226,12 @@ document.querySelectorAll("main > section").forEach(sec => {
     try { localStorage.setItem("collapsed", JSON.stringify(collapsed)); } catch(_) {}
   };
 });
-function setSummary(key, text){ const el = document.getElementById(key + "-sum"); if (el) el.textContent = text; }
+function setSummary(key, text, iconSvg){
+  const el = document.getElementById(key + "-sum");
+  if (!el) return;
+  el.textContent = text;
+  if (iconSvg) el.insertAdjacentHTML("afterbegin", `<span class="sum-ic">${iconSvg}</span>`);
+}
 
 // ---------- impostazioni ----------
 const LAT = 45.6717, LON = 11.9268;            // Castelfranco Veneto
@@ -331,6 +342,12 @@ const SCHOOL = [
   ["Educazione fisica","Educazione fisica","Italiano","Scienze","Mensa · Laura","Arte","Matematica"],
   ["Matematica","Matematica","Tecnologia","Italiano","Mensa · Laura","Religione","Religione"]
 ];
+// cose da mettere nello zaino: giorno (0 = lunedì) -> [{ cosa, per quale materia }]
+const SCHOOL_BRING = {
+  2: [{ item: "Flauto", subject: "Musica" }],
+  3: [{ item: "Tuta", subject: "Educazione fisica" }]
+};
+const BAG_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7V5a4 4 0 0 1 8 0v2"/><rect x="4" y="7" width="16" height="14" rx="3"/><path d="M4 13h16M10 13v2h4v-2"/></svg>`;
 // dalle 16 in poi mostra già il giorno di scuola successivo (per preparare lo zaino)
 function nextSchoolDay(d){ do { d = addDays(d, 1); } while (d.getDay() === 0 || d.getDay() === 6); return d; }
 const schoolDefault = (today.getDay() >= 1 && today.getDay() <= 5 && new Date().getHours() < 16) ? today : nextSchoolDay(today);
@@ -358,18 +375,23 @@ function renderSchool(){
   });
   const isDefault = schoolSel === (schoolDefault.getDay() + 6) % 7;
   const rel = isDefault ? (schoolDefault.getTime() === today.getTime() ? "Oggi, " : schoolDefault.getTime() === addDays(today,1).getTime() ? "Domani, " : "") : "";
-  let html = `<p class="when">${rel}${rel ? DAYS_LONG[schoolSel + 1].toLowerCase() : DAYS_LONG[schoolSel + 1]}</p><ul class="sc-list">`;
+  const bring = SCHOOL_BRING[schoolSel] || [];
+  let html = `<p class="when">${rel}${rel ? DAYS_LONG[schoolSel + 1].toLowerCase() : DAYS_LONG[schoolSel + 1]}</p>`;
+  if (bring.length) html += `<div class="bring">${BAG_ICON}<div><small>Da portare</small><strong>${bring.map(b => esc(b.item)).join(", ")}</strong></div></div>`;
+  html += `<ul class="sc-list">`;
   schoolBlocks(SCHOOL[schoolSel]).forEach(b => {
     const lunch = b.s.startsWith("Mensa");
-    const cls = lunch ? "lunch" : b.s === "Educazione fisica" ? "pe" : "";
-    html += `<li class="${cls}"><span class="s">${esc(b.s)}</span>${b.n > 1 ? `<span class="x">${b.n} ore</span>` : ""}</li>`;
+    const tag = bring.find(x => x.subject === b.s);
+    html += `<li class="${lunch ? "lunch" : ""}"><span class="s">${esc(b.s)}</span>${tag ? `<span class="bring-tag">${esc(tag.item)}</span>` : ""}${b.n > 1 ? `<span class="x">${b.n} ore</span>` : ""}</li>`;
   });
   html += `</ul>`;
   document.getElementById("school").innerHTML = html;
 
   const sd = SCHOOL[(schoolDefault.getDay() + 6) % 7];
   const label = schoolDefault.getTime() === today.getTime() ? "Oggi" : schoolDefault.getTime() === addDays(today,1).getTime() ? "Domani" : DAYS[(schoolDefault.getDay() + 6) % 7];
-  setSummary("c-h", `${label}: ` + [...new Set(sd.filter(s => !s.startsWith("Mensa")))].join(", "));
+  const sb = SCHOOL_BRING[(schoolDefault.getDay() + 6) % 7] || [];
+  setSummary("c-h", `${label}: ` + (sb.length ? `portare ${sb.map(b => b.item.toLowerCase()).join(", ")} · ` : "") +
+    [...new Set(sd.filter(s => !s.startsWith("Mensa")))].join(", "));
 }
 
 // ---------- meteo (Open-Meteo, senza chiave) ----------
@@ -417,7 +439,7 @@ function renderWeather(w, cached){
   document.getElementById("weather").innerHTML = html;
   const up = new Date(w._fetched);
   document.getElementById("w-upd").textContent = "agg. " + up.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
-  setSummary("w-h", `${r(c.temperature_2m)}° · ${desc}`);
+  setSummary("w-h", `${r(c.temperature_2m)}° · ${desc}`, ICONS[icon]);
 }
 
 async function loadWeather(){
