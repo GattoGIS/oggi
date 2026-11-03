@@ -51,6 +51,16 @@ header p{margin:4px 0 0;color:var(--muted)}
 section{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px}
 .eyebrow{font:600 .72rem/1 var(--body);text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 12px;display:flex;justify-content:space-between;gap:8px}
 /* sezioni richiudibili */
+.eyebrow .sec-toggle{flex:1;width:auto;min-width:0}
+/* maniglia per trascinare i riquadri */
+.grip{flex:none;display:grid;place-items:center;width:30px;height:30px;margin:-8px -8px -8px 2px;border:0;border-radius:8px;background:none;color:var(--muted);cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;opacity:.55}
+.grip:hover,.grip:focus-visible{opacity:1;background:var(--sky-soft)}
+.grip:focus-visible{outline:2px solid var(--sky);outline-offset:1px}
+.grip svg{width:18px;height:18px}
+main > section.drag-src{opacity:.35;outline:2px dashed var(--sky);outline-offset:-2px}
+.drag-ghost{position:fixed;z-index:50;pointer-events:none;margin:0;box-shadow:0 18px 40px rgba(0,0,0,.25);transform:rotate(-1deg) scale(1.02);opacity:.96;animation:none!important}
+body.dragging{cursor:grabbing;-webkit-user-select:none;user-select:none}
+.ver button{background:none;border:0;padding:0;margin-left:6px;color:var(--sky);font:inherit;cursor:pointer;text-decoration:underline}
 .sec-toggle{display:flex;align-items:center;gap:8px;width:100%;min-height:28px;margin:-6px 0;padding:6px 0;background:none;border:0;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .sec-toggle:focus-visible{outline:2px solid var(--sky);outline-offset:4px;border-radius:6px}
 .sec-toggle .sec-title{flex:1;min-width:0}
@@ -196,6 +206,16 @@ ol.dish li.side{background:transparent;padding:2px 12px;color:var(--muted)}
   .db-dot.night::after{border-color:var(--night)}
 }
 .sc-list li .bring-tag{flex:none;font:600 .72rem/1 var(--body);padding:4px 8px;border-radius:99px;background:var(--sun);color:#17212b}
+/* colori per figlio: verde = Antonio (scuola, mensa, scout), giallo = nido */
+:root{--ant:#2e7d4a;--ant-soft:#e2f1e6;--nido:#95600a;--nido-soft:#fbefd6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ant:#7fcf98;--ant-soft:#1b2e22;--nido:#e9b949;--nido-soft:#33290f}}
+:root[data-theme="dark"]{--ant:#7fcf98;--ant-soft:#1b2e22;--nido:#e9b949;--nido-soft:#33290f}
+section.tone-antonio{--sky:var(--ant);--sky-soft:var(--ant-soft);--leaf:var(--ant);--leaf-soft:var(--ant-soft);border-top:4px solid var(--ant)}
+section.tone-nido{--sky:var(--nido);--sky-soft:var(--nido-soft);--leaf:var(--nido);--leaf-soft:var(--nido-soft);border-top:4px solid var(--nido)}
+section.tone-antonio .sec-title,section.tone-nido .sec-title{color:var(--sky)}
+section.tone-antonio .bring{background:var(--ant);color:var(--card)}
+section.tone-antonio .sc-list li .bring-tag{background:var(--ant);color:var(--card)}
+.sc-list li .menu-hint{display:block;font-size:.8rem;color:var(--muted);font-weight:400;margin-top:2px}
 .bring{display:flex;align-items:center;gap:12px;margin:12px 0 0;padding:12px 14px;border-radius:14px;background:var(--sun);color:#17212b}
 .bring svg{width:28px;height:28px;flex:none}
 .bring div{min-width:0}
@@ -296,13 +316,23 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
     <div id="month"><p class="status">Carico le ore del mese…</p></div>
   </section>
 
-  <section aria-labelledby="c-h">
+  <section aria-labelledby="c-h" class="tone-antonio">
     <h2 class="eyebrow" id="c-h"><span>4ªB Antonio</span><span>Orario scolastico</span></h2>
     <div class="sc-tabs" id="sc-tabs"></div>
     <div id="school"></div>
   </section>
 
-  <section aria-labelledby="m-h">
+  <section aria-labelledby="e-h" class="tone-antonio">
+    <h2 class="eyebrow" id="e-h"><span>Mensa Antonio</span><span>Primaria · autunno-inverno</span></h2>
+    <div class="picker">
+      <button id="e-prev" aria-label="Settimana precedente">‹</button>
+      <div class="tabs" id="e-tabs"></div>
+      <button id="e-next" aria-label="Settimana successiva">›</button>
+    </div>
+    <div id="e-menu"></div>
+  </section>
+
+  <section aria-labelledby="m-h" class="tone-nido">
     <h2 class="eyebrow" id="m-h"><span>Menù del nido</span><span>Salvarosa · Primavera</span></h2>
     <div class="picker">
       <button id="prev" aria-label="Settimana precedente">‹</button>
@@ -312,17 +342,18 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
     <div id="menu"></div>
   </section>
 
-  <section aria-labelledby="s-h">
+  <section aria-labelledby="s-h" class="tone-antonio">
     <h2 class="eyebrow" id="s-h"><span>Scout · Branco</span><span id="s-upd"></span></h2>
     <div id="scout"><p class="status">Carico il calendario…</p></div>
   </section>
 </main>
-<p class="ver">Versione del 3 novembre, 12:45</p>
+<p class="ver">Versione del 3 novembre, 17:00 · <button type="button" id="order-reset">ripristina l'ordine dei riquadri</button></p>
 
 <script>
 // ---------- sezioni richiudibili (lo stato resta salvato su ogni telefono) ----------
 let collapsed = [];
 try { collapsed = JSON.parse(localStorage.getItem("collapsed")) || []; } catch(_) {}
+const GRIP = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>`;
 const CHEV = `<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`;
 document.querySelectorAll("main > section").forEach(sec => {
   const h = sec.querySelector("h2.eyebrow");
@@ -338,6 +369,11 @@ document.querySelectorAll("main > section").forEach(sec => {
   sum.className = "sec-sum"; sum.id = key + "-sum";
   btn.appendChild(sum);
   h.appendChild(btn);
+  const grip = document.createElement("button");
+  grip.type = "button"; grip.className = "grip";
+  grip.setAttribute("aria-label", "Sposta il riquadro (trascina, oppure frecce su e giù)");
+  grip.innerHTML = GRIP;
+  h.appendChild(grip);
   const body = document.createElement("div");
   body.className = "sec-body"; body.id = key + "-body";
   while (h.nextSibling) body.appendChild(h.nextSibling);
@@ -475,6 +511,73 @@ function renderMenu(){
   const first = MENU[weekIndex(mondayOf(ref))][(ref.getDay() + 6) % 7][0];
   setSummary("m-h", (weekend ? "Lun: " : "") + first);
 }
+// ---------- mensa primaria (Comune di Castelfranco, CIRFOOD) ----------
+// menù autunno-inverno 2026-27, ciclo di 4 settimane: la settimana di lunedì 5/10/2026 è la 1ª
+const ELEM_START = new Date(2026, 9, 5), ELEM_END = new Date(2027, 1, 19);
+const ELEM_MENU = [
+  [ // 1ª settimana
+    ["Riso all'olio","Bocconcini di pollo dorati","Purè di patate","Frutta fresca di stagione","Pane fresco"],
+    ["Pasta al ragù di carni bianche","Piselli al tegame","Insalata mista","Frutta fresca di stagione","Pane fresco"],
+    ["Passato di verdure con orzo","Asiago","Spinaci al tegame","Dolce","Pane fresco"],
+    ["Pizza Margherita","Prosciutto cotto","Carote julienne","Frutta fresca di stagione","Pane fresco"],
+    ["Pasta alla pizzaiola","Hamburger di merluzzo al forno","Fagiolini all'olio","Yogurt alla frutta","Pane fresco"]
+  ],
+  [ // 2ª
+    ["Gnocchi al ragù di bovino","Ceci al tegame","Carote julienne","Frutta fresca di stagione","Pane fresco"],
+    ["Risotto ai porri","Primosale","Bieta all'olio","Budino","Pane fresco"],
+    ["Pasta al pomodoro","Filetto di limanda dorato al forno","Insalatina verde","Yogurt alla frutta","Pane fresco"],
+    ["Vellutata di carote e zucca con riso","Pollo al forno","Patate al forno","Frutta fresca di stagione","Pane fresco"],
+    ["Pasta all'olio","Polpettine di ricotta e spinaci","Cappuccio julienne","Frutta fresca di stagione","Pane fresco"]
+  ],
+  [ // 3ª
+    ["Pasta al pomodoro","Uova strapazzate","Fagiolini all'olio","Dolce","Pane fresco"],
+    ["Pasta al pesto","Filetto di merluzzo gratinato","Insalata verde","Frutta fresca di stagione","Pane fresco"],
+    ["Lasagne al ragù di bovino","Lenticchie al tegame","Insalata di radicchi","Yogurt alla frutta","Pane fresco"],
+    ["Riso all'olio","Mozzarella","Spinaci all'olio","Frutta fresca di stagione","Pane fresco"],
+    ["Crema di spinaci con riso","Affettato di tacchino","Patate agli aromi","Frutta fresca di stagione","Pane fresco"]
+  ],
+  [ // 4ª
+    ["Risotto alla zucca","Stracchino","Finocchi julienne","Frutta fresca di stagione","Pane fresco"],
+    ["Pasta al pomodoro","Uova strapazzate","Broccoli all'olio","Yogurt alla frutta","Pane fresco"],
+    ["Pasta al ragù di verdure","Spezzatino di bovino","Polenta","Frutta fresca di stagione","Pane fresco"],
+    ["Pasta al burro e salvia","Filetto di merluzzo dorato","Fagiolini all'olio","Budino","Pane fresco"],
+    ["Crema di legumi con crostini","Polpettone di carni bianche al forno","Insalata verde","Frutta fresca di stagione","Pane fresco"]
+  ]
+];
+function elemWeek(monday){
+  const days = Math.round((Date.UTC(monday.getFullYear(), monday.getMonth(), monday.getDate()) -
+    Date.UTC(ELEM_START.getFullYear(), ELEM_START.getMonth(), ELEM_START.getDate())) / 864e5);
+  return ((Math.floor(days / 7) % 4) + 4) % 4;
+}
+const elemDay = d => ELEM_MENU[elemWeek(mondayOf(d))][(d.getDay() + 6) % 7];
+let eSelected = (today.getDay() === 0 || today.getDay() === 6) ? addDays(mondayOf(today), 7) : today;
+function renderElem(){
+  const mon = mondayOf(eSelected), wi = elemWeek(mon);
+  const tabs = document.getElementById("e-tabs");
+  tabs.innerHTML = "";
+  DAYS.forEach((label, i) => {
+    const d = addDays(mon, i);
+    const b = document.createElement("button");
+    b.type = "button"; b.id = "e-day-" + i; b.textContent = label;
+    b.setAttribute("aria-pressed", d.getTime() === eSelected.getTime());
+    if (d.getTime() === today.getTime()) b.classList.add("today");
+    b.onclick = () => { eSelected = d; renderElem(); };
+    tabs.appendChild(b);
+  });
+  const rel = eSelected.getTime() === today.getTime() ? "Oggi" : eSelected.getTime() === addDays(today, 1).getTime() ? "Domani" : "";
+  const title = (rel ? rel + ", " : "") + longDate(eSelected).replace(/^\w/, c => rel ? c.toLowerCase() : c);
+  let html = `<p class="when">${title}<span class="week">${wi + 1}ª settimana</span></p><ol class="dish">`;
+  elemDay(eSelected).forEach((it, i) => { html += `<li${i >= 3 ? ' class="side"' : ""}>${esc(it)}</li>`; });
+  html += `</ol>`;
+  if (eSelected < ELEM_START || eSelected > ELEM_END) html += `<p class="note">Fuori dal periodo del menù autunno-inverno (5 ottobre – 19 febbraio): quando arriva il menù primaverile va aggiornato.</p>`;
+  document.getElementById("e-menu").innerHTML = html;
+  const weekend = today.getDay() === 0 || today.getDay() === 6;
+  const ref = weekend ? addDays(mondayOf(today), 7) : today;
+  setSummary("e-h", (weekend ? "Lun: " : "") + elemDay(ref)[0]);
+}
+document.getElementById("e-prev").onclick = () => { eSelected = addDays(eSelected, -7); renderElem(); };
+document.getElementById("e-next").onclick = () => { eSelected = addDays(eSelected, 7); renderElem(); };
+
 document.getElementById("prev").onclick = () => { selected = addDays(selected, -7); renderMenu(); };
 document.getElementById("next").onclick = () => { selected = addDays(selected, 7); renderMenu(); };
 renderMenu();
@@ -559,7 +662,9 @@ function renderSchool(){
     const tag = bring.find(x => x.subject === b.s);
     const st = toMin(b.start), en = toMin(b.end);
     const cls = [lunch ? "lunch" : "", live && en <= nowMin ? "done" : "", live && st <= nowMin && nowMin < en ? "current" : ""].join(" ").trim();
-    html += `<li class="${cls}" data-start="${st}" data-end="${en}"><span class="h num">${b.start}</span><span class="s">${esc(b.s)}</span>${tag ? `<span class="bring-tag">${esc(tag.item)}</span>` : ""}${b.n > 1 ? `<span class="x">${b.n} ore</span>` : ""}</li>`;
+    const dayDate = addDays(mondayOf(schoolDefault), schoolSel);
+    const hint = lunch ? `<span class="menu-hint">${esc(elemDay(dayDate).slice(0, 2).join(" · "))}</span>` : "";
+    html += `<li class="${cls}" data-start="${st}" data-end="${en}"><span class="h num">${b.start}</span><span class="s">${esc(b.s)}${hint}</span>${tag ? `<span class="bring-tag">${esc(tag.item)}</span>` : ""}${b.n > 1 ? `<span class="x">${b.n} ore</span>` : ""}</li>`;
   });
   html += `</ul></div>`;
   document.getElementById("school").innerHTML = html;
@@ -1056,6 +1161,7 @@ document.getElementById("mo-next").onclick = () => shiftMonth(1);
 loadMonth();
 setInterval(() => { if (document.visibilityState === "visible") tickWork(); }, 1000);
 
+renderElem();
 renderSchool();
 // ogni minuto aggiorna materia in corso e pallino
 setInterval(() => { if (document.visibilityState === "visible") renderSchool(); }, 60 * 1000);
@@ -1115,6 +1221,106 @@ if ("ResizeObserver" in window) {
 wide.addEventListener ? wide.addEventListener("change", queueLayout) : wide.addListener(queueLayout);
 window.addEventListener("resize", queueLayout);
 queueLayout();
+
+// ---------- spostare i riquadri trascinandoli (mouse e dita) ----------
+// L'ordine resta salvato su ogni dispositivo. Si trascina dalla maniglia a puntini nell'intestazione.
+const mainEl = document.querySelector("main");
+const DEFAULT_ORDER = [...mainEl.querySelectorAll(":scope > section")].map(s => s.querySelector("h2").id);
+const secByKey = k => document.getElementById(k)?.closest("main > section");
+function currentOrder(){ return [...mainEl.querySelectorAll(":scope > section")].map(s => s.querySelector("h2").id); }
+function saveOrder(){ try { localStorage.setItem("order", JSON.stringify(currentOrder())); } catch(_) {} }
+function applyOrder(order){
+  // riquadri nuovi non presenti nell'ordine salvato restano nella loro posizione originale
+  const final = order.filter(k => DEFAULT_ORDER.includes(k));
+  DEFAULT_ORDER.forEach((k, i) => {
+    if (final.includes(k)) return;
+    const prev = DEFAULT_ORDER.slice(0, i).reverse().find(p => final.includes(p));
+    final.splice(prev ? final.indexOf(prev) + 1 : 0, 0, k);
+  });
+  final.forEach(k => { const s = secByKey(k); if (s) mainEl.appendChild(s); });
+  queueLayout();
+  requestAnimationFrame(placeSchoolDot);
+}
+try { const o = JSON.parse(localStorage.getItem("order")); if (Array.isArray(o)) applyOrder(o); } catch(_) {}
+document.getElementById("order-reset").onclick = () => { try { localStorage.removeItem("order"); } catch(_) {} applyOrder(DEFAULT_ORDER); };
+
+let drag = null;
+function visibleSections(){ return [...mainEl.querySelectorAll(":scope > section")].filter(s => !s.hidden); }
+function onDragMove(e){
+  if (!drag) return;
+  e.preventDefault();
+  drag.x = e.clientX; drag.y = e.clientY;
+  drag.ghost.style.left = (e.clientX - drag.dx) + "px";
+  drag.ghost.style.top = (e.clientY - drag.dy) + "px";
+  // riquadro sotto il dito: il trascinato va prima o dopo, a seconda della metà
+  const target = visibleSections().find(s => {
+    if (s === drag.sec) return false;
+    const r = s.getBoundingClientRect();
+    return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+  });
+  if (target) {
+    const r = target.getBoundingClientRect();
+    const after = e.clientY > r.top + r.height / 2;
+    const ref = after ? target.nextElementSibling : target;
+    if (ref !== drag.sec && drag.sec.nextElementSibling !== ref) {
+      mainEl.insertBefore(drag.sec, ref);
+      layoutGrid();
+    }
+  }
+}
+function autoScroll(){
+  if (!drag) return;
+  const edge = 70, h = window.innerHeight;
+  if (drag.y < edge) window.scrollBy(0, -Math.ceil((edge - drag.y) / 6));
+  else if (drag.y > h - edge) window.scrollBy(0, Math.ceil((drag.y - (h - edge)) / 6));
+  requestAnimationFrame(autoScroll);
+}
+function endDrag(){
+  if (!drag) return;
+  drag.ghost.remove();
+  drag.sec.classList.remove("drag-src");
+  document.body.classList.remove("dragging");
+  window.removeEventListener("pointermove", onDragMove);
+  drag = null;
+  saveOrder();
+  queueLayout();
+  requestAnimationFrame(placeSchoolDot);
+}
+mainEl.addEventListener("pointerdown", e => {
+  const grip = e.target.closest(".grip");
+  if (!grip || (e.pointerType === "mouse" && e.button !== 0)) return;
+  e.preventDefault();
+  const sec = grip.closest("section");
+  const r = sec.getBoundingClientRect();
+  const ghost = sec.cloneNode(true);
+  ghost.querySelectorAll("[id]").forEach(el => el.removeAttribute("id"));
+  ghost.removeAttribute("id");
+  ghost.classList.add("drag-ghost");
+  ghost.style.width = r.width + "px";
+  ghost.style.left = r.left + "px";
+  ghost.style.top = r.top + "px";
+  document.body.appendChild(ghost);
+  sec.classList.add("drag-src");
+  document.body.classList.add("dragging");
+  drag = { sec, ghost, dx: e.clientX - r.left, dy: e.clientY - r.top, x: e.clientX, y: e.clientY };
+  window.addEventListener("pointermove", onDragMove, { passive: false });
+  window.addEventListener("pointerup", endDrag, { once: true });
+  window.addEventListener("pointercancel", endDrag, { once: true });
+  requestAnimationFrame(autoScroll);
+});
+// da tastiera: frecce su/giù sulla maniglia
+mainEl.addEventListener("keydown", e => {
+  const grip = e.target.closest(".grip");
+  if (!grip || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+  e.preventDefault();
+  const sec = grip.closest("section");
+  const sibs = visibleSections(), i = sibs.indexOf(sec);
+  const other = sibs[e.key === "ArrowUp" ? i - 1 : i + 1];
+  if (!other) return;
+  mainEl.insertBefore(sec, e.key === "ArrowUp" ? other : other.nextElementSibling);
+  saveOrder(); queueLayout(); requestAnimationFrame(placeSchoolDot);
+  grip.focus();
+});
 
 // aggiorna ogni 30 minuti e quando si riapre la pagina
 setInterval(() => { loadWeather(); loadScout(); loadAgenda(); loadWork(); loadMonth(true); }, 30 * 60 * 1000);
