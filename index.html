@@ -62,6 +62,11 @@ section.collapsed .eyebrow{margin:0}
 section.collapsed .sec-body,section.collapsed .sec-meta{display:none}
 section.collapsed .sec-sum{display:block}
 section.collapsed .chev{transform:rotate(-90deg)}
+/* riassunto troppo lungo: scorre avanti e indietro */
+.sec-sum .sum-txt{display:inline}
+.sec-sum.marquee{text-overflow:clip}
+.sec-sum.marquee .sum-txt{display:inline-block;animation:marq var(--dur,8s) ease-in-out infinite alternate}
+@keyframes marq{0%,18%{transform:translateX(0)}82%,100%{transform:translateX(var(--shift,0))}}
 @media (prefers-reduced-motion:reduce){.sec-toggle .chev{transition:none}}
 .num{font-variant-numeric:tabular-nums}
 
@@ -280,7 +285,7 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
     <div id="scout"><p class="status">Carico il calendario…</p></div>
   </section>
 </main>
-<p class="ver">Versione del 3 novembre, 11:45</p>
+<p class="ver">Versione del 3 novembre, 11:55</p>
 
 <script>
 // ---------- sezioni richiudibili (lo stato resta salvato su ogni telefono) ----------
@@ -306,7 +311,7 @@ document.querySelectorAll("main > section").forEach(sec => {
   while (h.nextSibling) body.appendChild(h.nextSibling);
   sec.appendChild(body);
   btn.setAttribute("aria-controls", body.id);
-  const apply = closed => { sec.classList.toggle("collapsed", closed); btn.setAttribute("aria-expanded", String(!closed)); };
+  const apply = closed => { sec.classList.toggle("collapsed", closed); btn.setAttribute("aria-expanded", String(!closed)); requestAnimationFrame(() => fitSummary(document.getElementById(key + "-sum"))); };
   apply(collapsed.includes(key));
   btn.onclick = () => {
     const closed = !sec.classList.contains("collapsed");
@@ -318,10 +323,29 @@ document.querySelectorAll("main > section").forEach(sec => {
 function setSummary(key, text, iconSvg, alert){
   const el = document.getElementById(key + "-sum");
   if (!el) return;
-  el.textContent = text;
+  const sig = text + "|" + !!alert + "|" + (iconSvg ? iconSvg.length : 0);
+  if (el.dataset.sig === sig) return;              // niente da cambiare: non fa ripartire lo scorrimento
+  el.dataset.sig = sig;
   el.classList.toggle("alert", !!alert);
-  if (iconSvg) el.insertAdjacentHTML("afterbegin", `<span class="sum-ic">${iconSvg}</span>`);
+  el.innerHTML = `<span class="sum-txt">${iconSvg ? `<span class="sum-ic">${iconSvg}</span>` : ""}</span>`;
+  el.firstChild.appendChild(document.createTextNode(text));
+  requestAnimationFrame(() => fitSummary(el));
 }
+// se il riassunto non entra, lo fa scorrere (non con "riduci movimento" attivo)
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+function fitSummary(el){
+  if (!el) return;
+  const t = el.querySelector(".sum-txt");
+  el.classList.remove("marquee");
+  if (!t || el.offsetParent === null || reduceMotion.matches) return;
+  const over = el.scrollWidth - el.clientWidth;
+  if (over > 2) {
+    t.style.setProperty("--shift", `-${over + 4}px`);
+    t.style.setProperty("--dur", `${Math.max(5, over / 22 + 3).toFixed(1)}s`);
+    el.classList.add("marquee");
+  }
+}
+window.addEventListener("resize", () => document.querySelectorAll(".sec-sum").forEach(fitSummary));
 
 // ---------- impostazioni ----------
 const LAT = 45.6717, LON = 11.9268;            // Castelfranco Veneto
