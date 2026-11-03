@@ -125,6 +125,28 @@ ol.dish li.side{background:transparent;padding:2px 12px;color:var(--muted)}
 @media (prefers-reduced-motion:no-preference){
   .wk-state:not(.idle) i::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2px solid currentColor;animation:pingdot 2.4s ease-out infinite}
 }
+/* ore del mese */
+.mo-nav{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.mo-nav strong{font:700 1.15rem/1.2 var(--display);text-transform:capitalize}
+.mo-nav button{flex:none;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--fg);font:600 1.1rem/1 var(--body);cursor:pointer}
+.mo-nav button:disabled{opacity:.35;cursor:default}
+.mo-nav button:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
+.mo-tot{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:12px 0 0}
+.mo-tot div{padding:10px 12px;border-radius:12px;background:var(--sky-soft)}
+.mo-tot small{display:block;font:600 .7rem/1.2 var(--body);text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.mo-tot b{font:700 1.2rem/1.3 var(--display)}
+.mo-scroll{overflow-x:auto;margin:12px 0 0}
+.mo-table{width:100%;border-collapse:collapse;font-size:.88rem}
+.mo-table th{text-align:left;font:600 .7rem/1.2 var(--body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:6px 6px 6px 0;border-bottom:1px solid var(--line)}
+.mo-table td{padding:7px 6px 7px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+.mo-table td.h,.mo-table th.h{text-align:right;padding-right:0}
+.mo-table td.h b{font-weight:700}
+.mo-table td.p{color:var(--muted);font-size:.8rem}
+.mo-table tr.we td:first-child{color:var(--muted)}
+.mo-table tr.today td{color:var(--sky)}
+.mo-dl{margin-top:12px;display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:12px;border:1px solid var(--sky);background:transparent;color:var(--sky);font:600 .9rem var(--body);cursor:pointer}
+.mo-dl svg{width:18px;height:18px}
+.mo-dl:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
 /* scuola */
 .sc-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
 .sc-tabs button{border:0;background:transparent;color:var(--muted);font:600 .85rem/1 var(--body);padding:9px 0;border-radius:10px;cursor:pointer}
@@ -264,6 +286,16 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
     <div id="work"><p class="status">Carico il tempo di lavoro…</p></div>
   </section>
 
+  <section aria-labelledby="o-h" id="month-box" hidden>
+    <h2 class="eyebrow" id="o-h"><span>Ore del mese</span><span>Presenza al PC</span></h2>
+    <div class="mo-nav">
+      <button type="button" id="mo-prev" aria-label="Mese precedente">‹</button>
+      <strong id="mo-title"></strong>
+      <button type="button" id="mo-next" aria-label="Mese successivo">›</button>
+    </div>
+    <div id="month"><p class="status">Carico le ore del mese…</p></div>
+  </section>
+
   <section aria-labelledby="c-h">
     <h2 class="eyebrow" id="c-h"><span>4ªB Antonio</span><span>Orario scolastico</span></h2>
     <div class="sc-tabs" id="sc-tabs"></div>
@@ -285,7 +317,7 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
     <div id="scout"><p class="status">Carico il calendario…</p></div>
   </section>
 </main>
-<p class="ver">Versione del 3 novembre, 11:55</p>
+<p class="ver">Versione del 3 novembre, 12:45</p>
 
 <script>
 // ---------- sezioni richiudibili (lo stato resta salvato su ogni telefono) ----------
@@ -947,6 +979,81 @@ async function loadWork(){
 }
 loadWork();
 setInterval(() => { if (document.visibilityState === "visible") loadWork(); }, 2 * 60 * 1000);
+
+// ---------- ore del mese (presenza = dal primo all'ultimo movimento della giornata) ----------
+let moMonth = isoKey(today).slice(0, 7);
+const moCache = {};
+const minOf = hm => { const [h, m] = hm.split(":").map(Number); return h * 60 + m; };
+const hhmm = m => `${Math.floor(m / 60)}:${String(Math.round(m % 60)).padStart(2, "0")}`;
+const fmtH = m => `${Math.floor(m / 60)} h ${String(Math.round(m % 60)).padStart(2, "0")}`;
+function dayRow(d){
+  const pres = d.first && d.last ? Math.max(0, minOf(d.last) - minOf(d.first)) : 0;
+  const pause = (d.pauses || []).reduce((a, p) => a + Math.max(0, minOf(p.to) - minOf(p.from)), 0);
+  return { ...d, pres, pause, net: Math.max(0, pres - pause), active: d.activeMin || 0 };
+}
+function monthLabel(m){ const [y, mm] = m.split("-").map(Number); return `${MONTHS[mm - 1]} ${y}`; }
+function renderMonth(){
+  const data = moCache[moMonth];
+  document.getElementById("mo-title").textContent = monthLabel(moMonth);
+  document.getElementById("mo-next").disabled = moMonth >= isoKey(today).slice(0, 7);
+  const box = document.getElementById("month");
+  if (!data) { box.innerHTML = `<p class="status">Carico le ore del mese…</p>`; return; }
+  const rows = data.days.filter(d => d.first).map(dayRow);
+  if (!rows.length) { box.innerHTML = `<p class="status">Nessuna giornata registrata in questo mese.</p>`; setSummary("o-h", `${monthLabel(moMonth)}: nessun dato`); return; }
+  const tot = rows.reduce((a, r) => a + r.pres, 0);
+  let html = `<div class="mo-tot num"><div><small>Totale</small><b>${fmtH(tot)}</b></div><div><small>Giorni</small><b>${rows.length}</b></div><div><small>Media</small><b>${fmtH(tot / rows.length)}</b></div></div>`;
+  html += `<div class="mo-scroll"><table class="mo-table num"><thead><tr><th>Giorno</th><th>Inizio</th><th>Fine</th><th>Pause</th><th class="h">Presenza</th></tr></thead><tbody>`;
+  rows.forEach(r => {
+    const dt = new Date(r.date + "T12:00");
+    const cls = [dt.getDay() === 0 || dt.getDay() === 6 ? "we" : "", r.date === isoKey(today) ? "today" : ""].join(" ").trim();
+    html += `<tr class="${cls}"><td>${DAYS_LONG[dt.getDay()].slice(0, 3)} ${dt.getDate()}</td><td>${r.first}</td><td>${r.last}</td><td class="p">${r.pause ? fmtMin(r.pause) : "–"}</td><td class="h"><b>${hhmm(r.pres)}</b></td></tr>`;
+  });
+  html += `</tbody></table></div>`;
+  html += `<button type="button" class="mo-dl" id="mo-dl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Scarica per Excel</button>`;
+  box.innerHTML = html;
+  document.getElementById("mo-dl").onclick = () => downloadMonthCsv(rows);
+  setSummary("o-h", `${monthLabel(moMonth)}: ${fmtH(tot)} · ${rows.length} giorni`);
+}
+function downloadMonthCsv(rows){
+  // separatore ";" e virgola decimale: Excel in italiano lo apre già in colonne
+  const dec = m => (m / 60).toFixed(2).replace(".", ",");
+  const lines = [["Data","Giorno","Inizio","Fine","Presenza (h:mm)","Presenza (ore)","Pause oltre 30 min (h:mm)","Netto (h:mm)","Attivo al PC (h:mm)"].join(";")];
+  rows.forEach(r => {
+    const dt = new Date(r.date + "T12:00");
+    lines.push([r.date.split("-").reverse().join("/"), DAYS_LONG[dt.getDay()], r.first, r.last, hhmm(r.pres), dec(r.pres), hhmm(r.pause), hhmm(r.net), hhmm(r.active)].join(";"));
+  });
+  const tot = rows.reduce((a, r) => a + r.pres, 0);
+  lines.push(["Totale", "", "", "", hhmm(tot), dec(tot), "", "", ""].join(";"));
+  const blob = new Blob(["\ufeff" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `ore-lavoro-${moMonth}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+async function loadMonth(force){
+  if (!AGENDA_URL || !agendaKey) return;
+  document.getElementById("month-box").hidden = false;
+  renderMonth();
+  if (moCache[moMonth] && !force) return;
+  try {
+    const res = await fetch(`${AGENDA_URL}/work/month?m=${moMonth}&k=${encodeURIComponent(agendaKey)}`);
+    if (!res.ok) throw new Error(res.status);
+    moCache[moMonth] = await res.json();
+    renderMonth();
+  } catch(e) {
+    document.getElementById("month").innerHTML = `<p class="err">Non riesco a leggere le ore del mese. Riprova tra poco.</p>`;
+  }
+}
+function shiftMonth(n){
+  let [y, m] = moMonth.split("-").map(Number);
+  m += n; if (m < 1) { m = 12; y--; } if (m > 12) { m = 1; y++; }
+  moMonth = `${y}-${String(m).padStart(2, "0")}`;
+  loadMonth();
+}
+document.getElementById("mo-prev").onclick = () => shiftMonth(-1);
+document.getElementById("mo-next").onclick = () => shiftMonth(1);
+loadMonth();
 setInterval(() => { if (document.visibilityState === "visible") tickWork(); }, 1000);
 
 renderSchool();
@@ -1010,7 +1117,7 @@ window.addEventListener("resize", queueLayout);
 queueLayout();
 
 // aggiorna ogni 30 minuti e quando si riapre la pagina
-setInterval(() => { loadWeather(); loadScout(); loadAgenda(); loadWork(); }, 30 * 60 * 1000);
+setInterval(() => { loadWeather(); loadScout(); loadAgenda(); loadWork(); loadMonth(true); }, 30 * 60 * 1000);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") {
     if (startOfDay(new Date()).getTime() !== today.getTime()) location.reload();
