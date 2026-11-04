@@ -333,7 +333,7 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
   </section>
 
   <section aria-labelledby="m-h" class="tone-nido">
-    <h2 class="eyebrow" id="m-h"><span>Menù del nido</span><span>Salvarosa · Primavera</span></h2>
+    <h2 class="eyebrow" id="m-h"><span>Menù del nido</span><span>Salvarosa · novembre–marzo</span></h2>
     <div class="picker">
       <button id="prev" aria-label="Settimana precedente">‹</button>
       <div class="tabs" id="tabs"></div>
@@ -347,7 +347,7 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
     <div id="scout"><p class="status">Carico il calendario…</p></div>
   </section>
 </main>
-<p class="ver">Versione del 3 novembre, 17:20 · <button type="button" id="order-reset">ripristina l'ordine dei riquadri</button></p>
+<p class="ver">Versione del 4 novembre, 12:10 · <button type="button" id="order-reset">ripristina l'ordine dei riquadri</button></p>
 
 <script>
 // ---------- sezioni richiudibili (lo stato resta salvato su ogni telefono) ----------
@@ -417,36 +417,38 @@ window.addEventListener("resize", () => document.querySelectorAll(".sec-sum").fo
 
 // ---------- impostazioni ----------
 const LAT = 45.6717, LON = 11.9268;            // Castelfranco Veneto
-const CYCLE_START = new Date(2026, 8, 28);     // lunedì 28/09/2026 = I settimana
+// menù infanzia novembre–marzo 2026-27: la settimana di lunedì 2/11/2026 è la I
+const CYCLE_START = new Date(2026, 10, 2);
+const MENU_FROM = new Date(2026, 10, 2), MENU_TO = new Date(2027, 2, 31);
 
 const MENU = [
   [ // I
-    ["Risotto allo zafferano","Frittata al forno con verdure","Fagiolini all'olio","Pane"],
-    ["Pasta al pomodoro","Polpettone di tacchino","Zucchine all'olio","Pane"],
-    ["Passato di verdure con pastina","Polpettine di manzo in umido","Verdure cotte","Pane"],
-    ["Pasta all'olio EVO e grana","Filetti di merluzzo al forno","Verdure crude","Pane"],
-    ["Crema di piselli e zucchine con crostini","Mozzarella","Pomodoro","Pane"]
+    ["Riso al pomodoro","Frittata","Fagiolini cotti all'olio","Pane"],
+    ["Pasta al pesto","Rollè di tacchino","Insalata","Pane"],
+    ["Spezzatino di manzo con polenta e patate","Verdure invernali","Pane"],
+    ["Pasta al burro e salvia","Filetti di merluzzo al forno","Insalata","Pane"],
+    ["Crema di ceci (o lenticchie) e zucca con crostini/pastina","Stracchino","Carote cotte all'olio","Pane"]
   ],
   [ // II
-    ["Orzotto in crema di piselli","Uova sode","Carote","Zucchine","Pane"],
-    ["Pasta alla crudaiola","Bocconcini di pollo","Verdure crude","Pane"],
-    ["Cous cous di verdure","Bocconcini di manzo agli aromi","Cappuccio","Pomodoro","Pane"],
-    ["Pasta al pomodoro","Filetto di platessa al limone","Peperonata","Pane"],
-    ["Pizza margherita","Caciottina fresca","Verdure crude","Pane"]
+    ["Pasta al pomodoro","Pepite di pesce dorate al mais","Verdure invernali","Pane"],
+    ["Passato di verdure invernali con pastina","Straccetti di pollo dorati al mais","Purea di patate","Pane"],
+    ["Minestra d'orzo","Uova sode","Fagiolini cotti all'olio","Pane"],
+    ["Pasta all'ortolana","Lonza di maiale al latte","Carote","Pane"],
+    ["Pizza Margherita","Verdure invernali crude","Pane"]
   ],
   [ // III
-    ["Gnocchi alla romana","Frittata","Piselli al prezzemolo","Carote","Pane"],
-    ["Riso con piselli","Carote","Insalata","Pane"],
-    ["Pasta al pomodoro","Caciottina fresca","Verdure crude","Pane"],
-    ["Passato di verdure con pastina","Filetti di merluzzo al forno","Zucchine all'olio","Pane"],
-    ["Pasta al ragù di tacchino","Finocchio","Carote","Pane"]
+    ["Gnocchi di patate al pomodoro","Frittata al forno","Carote cotte all'olio","Piselli","Pane"],
+    ["Pasta e fagioli alla veneta o passato di verdure con fagioli","Prosciutto cotto","Insalata","Pane"],
+    ["Pasta al ragù di tacchino","Finocchio","Carote","Pane"],
+    ["Risotto ai porri","Salmone","Bieta cotta all'olio","Pane"],
+    ["Pasta al pesto","Asiago","Verdure invernali","Pane"]
   ],
   [ // IV
-    ["Pasta al pesto","Stracchino","Cavolfiori all'olio","Pane"],
-    ["Riso al pomodoro","Polpette di legumi","Verdure crude","Pane"],
-    ["Pasta alla norma","Bocconcini di pollo","Insalata","Pane"],
-    ["Minestrone","Filetto di platessa","Verdure crude","Pane"],
-    ["Pasta al ragù di manzo","Verdure cotte","Pane"]
+    ["Pasta con lenticchie","Scamorza","Fagiolini cotti all'olio","Pane"],
+    ["Pasta all'olio EVO e grana","Petto di pollo alla salvia","Verdure invernali crude","Pane"],
+    ["Risotto alla zucca","Tortino di ceci","Cavolfiore cotto all'olio","Pane"],
+    ["Vellutata di patate e porri con pastina","Platessa al limone","Verdure invernali crude","Pane"],
+    ["Pasta pasticciata","Verdure invernali cotte","Pane"]
   ]
 ];
 const ROMAN = ["I","II","III","IV"];
@@ -501,8 +503,7 @@ function renderMenu(){
     html += `<li${side ? ' class="side"' : ""}>${it}</li>`;
   });
   html += `</ol><p class="snack">Merenda del mattino: frutta di stagione. Pomeriggio a rotazione: pane, latte, yogurt o frutta.</p>`;
-  const m = selected.getMonth();
-  if (m >= 10 || m <= 2) html += `<p class="note">Questo è il menù estivo (aprile–ottobre). Da novembre potrebbe esserci il menù invernale: va aggiornato.</p>`;
+  if (selected < MENU_FROM || selected > MENU_TO) html += `<p class="note">Fuori dal periodo del menù invernale (novembre–marzo): quando arriva il menù primaverile va aggiornato.</p>`;
   document.getElementById("menu").innerHTML = html;
 
   // riassunto per la sezione chiusa: primo piatto di oggi (nel weekend, di lunedì)
