@@ -125,6 +125,7 @@ ol.dish li.side{background:transparent;padding:2px 12px;color:var(--muted)}
 .wk-state.idle{background:var(--sky-soft);color:var(--muted)}
 .wk-stats{display:flex;flex-wrap:wrap;gap:6px 16px;margin:14px 0 0;padding:10px 12px;background:var(--sky-soft);border-radius:12px;font-size:.9rem}
 .wk-stats b{font-weight:600}
+.wk-extra{margin:10px 0 0;font-size:.85rem;color:var(--muted);font-style:italic}
 .wk-pauses{list-style:none;margin:10px 0 0;padding:0;font-size:.88rem;color:var(--muted);display:flex;flex-direction:column;gap:4px}
 .wk-apps{margin:14px 0 0;display:flex;flex-direction:column;gap:9px}
 .wk-app{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;font-size:.9rem}
@@ -347,7 +348,7 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
     <div id="scout"><p class="status">Carico il calendario…</p></div>
   </section>
 </main>
-<p class="ver">Versione del 4 novembre, 12:10 · <button type="button" id="order-reset">ripristina l'ordine dei riquadri</button></p>
+<p class="ver">Versione del 5 novembre, 14:50 · <button type="button" id="order-reset">ripristina l'ordine dei riquadri</button></p>
 
 <script>
 // ---------- sezioni richiudibili (lo stato resta salvato su ogni telefono) ----------
@@ -1012,7 +1013,7 @@ async function loadAgenda(){
 loadAgenda();
 
 // ---------- lavoro al PC (dati mandati dallo script sul PC al Worker) ----------
-const WORK_RUNNING_MIN = 30;           // oltre mezz'ora senza attività il cronometro si ferma
+const WORK_RUNNING_MIN = 45;           // oltre 45 minuti senza attività il cronometro si ferma
 let workData = null;
 const fmtMin = m => m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")}`;
 const hmToDate = hm => { const [h, m] = hm.split(":").map(Number); const d = new Date(today); d.setHours(h, m, 0, 0); return d; };
@@ -1021,7 +1022,7 @@ function workStatus(){
   const now = new Date();
   const first = hmToDate(workData.first), last = hmToDate(workData.last || workData.first);
   const sinceLast = (now - last) / 60000;
-  const running = sinceLast <= WORK_RUNNING_MIN;
+  const running = !workData.closed && sinceLast <= WORK_RUNNING_MIN;
   return { now, first, last, running, end: running ? now : last };
 }
 function tickWork(){
@@ -1070,9 +1071,11 @@ function renderWork(){
   const apps = Object.entries(merged).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 7);
   const max = apps.length ? apps[0][1] : 1;
   let html = `<div class="wk-top"><div class="wk-clock num"><span id="wk-clock">0:00:00</span><small>dal primo movimento alle ${workData.first}</small></div>` +
-    (st.running ? `<span class="wk-state"><i></i>in corso</span>` : `<span class="wk-state idle"><i></i>fermo dalle ${workData.last}</span>`) + `</div>`;
+    (st.running ? `<span class="wk-state"><i></i>in corso</span>` : `<span class="wk-state idle"><i></i>${workData.closed ? "giornata chiusa alle" : "fermo dalle"} ${workData.last}</span>`) + `</div>`;
   html += `<div class="wk-stats num"><span>Inizio <b>${workData.first}</b></span><span>Attivo <b>${fmtMin(workData.activeMin || 0)}</b></span>` +
     `<span>Pause <b>${pauses.length ? fmtMin(Math.round(pauseMin)) : "nessuna"}</b></span></div>`;
+  if (workData.extra && workData.extra.first)
+    html += `<p class="wk-extra num">Uso serale ${workData.extra.first}–${workData.extra.last} · non conteggiato nella giornata</p>`;
   if (pauses.length) html += `<ul class="wk-pauses num">${pauses.map(p => `<li>Pausa ${p.from}–${p.to} · ${fmtMin(Math.round((hmToDate(p.to) - hmToDate(p.from)) / 60000))}</li>`).join("")}</ul>`;
   if (apps.length) {
     html += `<div class="wk-apps">`;
@@ -1137,7 +1140,7 @@ function renderMonth(){
 function downloadMonthCsv(rows){
   // separatore ";" e virgola decimale: Excel in italiano lo apre già in colonne
   const dec = m => (m / 60).toFixed(2).replace(".", ",");
-  const lines = [["Data","Giorno","Inizio","Fine","Presenza (h:mm)","Presenza (ore)","Pause oltre 30 min (h:mm)","Netto (h:mm)","Attivo al PC (h:mm)"].join(";")];
+  const lines = [["Data","Giorno","Inizio","Fine","Presenza (h:mm)","Presenza (ore)","Pause oltre 45 min (h:mm)","Netto (h:mm)","Attivo al PC (h:mm)"].join(";")];
   rows.forEach(r => {
     const dt = new Date(r.date + "T12:00");
     lines.push([r.date.split("-").reverse().join("/"), DAYS_LONG[dt.getDay()], r.first, r.last, hhmm(r.pres), dec(r.pres), hhmm(r.pause), hhmm(r.net), hhmm(r.active)].join(";"));
