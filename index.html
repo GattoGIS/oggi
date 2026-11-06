@@ -348,7 +348,7 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
     <div id="scout"><p class="status">Carico il calendario…</p></div>
   </section>
 </main>
-<p class="ver">Versione del 5 novembre, 14:50 · <button type="button" id="order-reset">ripristina l'ordine dei riquadri</button></p>
+<p class="ver">Versione del 6 novembre, 10:00 · <button type="button" id="order-reset">ripristina l'ordine dei riquadri</button></p>
 
 <script>
 // ---------- sezioni richiudibili (lo stato resta salvato su ogni telefono) ----------
@@ -1043,7 +1043,7 @@ const APP_NAMES = [
   [/excel/i, "Excel"], [/winword|\bword\b/i, "Word"], [/powerpnt|powerpoint/i, "PowerPoint"], [/outlook|^olk$/i, "Outlook"],
   [/teams/i, "Teams"], [/onenote/i, "OneNote"], [/visual studio code|^code$/i, "VS Code"], [/notepad\+\+/i, "Notepad++"],
   [/notepad/i, "Blocco note"], [/zoom/i, "Zoom"], [/slack/i, "Slack"], [/whatsapp/i, "WhatsApp"], [/firefox/i, "Firefox"],
-  [/python/i, "Python"], [/blender/i, "Blender"], [/gimp/i, "GIMP"], [/inkscape/i, "Inkscape"], [/anydesk/i, "AnyDesk"]
+  [/python/i, "Python"], [/global[_ ]?mapper/i, "Global Mapper"], [/snippingtool|snipping tool|strumento di cattura/i, "Strumento di cattura"], [/^postgres/i, "PostgreSQL"], [/blender/i, "Blender"], [/gimp/i, "GIMP"], [/inkscape/i, "Inkscape"], [/anydesk/i, "AnyDesk"]
 ];
 // processi di sistema di Windows (es. "dwm" = Desktop Window Manager, che disegna le finestre)
 const SYSTEM_APPS = /^(dwm|desktop window manager|logonui|consent|lockapp|searchhost|shellhost|shellexperiencehost|startmenuexperiencehost|applicationframehost|textinputhost|windows explorer|esplora risorse|explorer|rundll32|dllhost|sihost|ctfmon)$/i;
