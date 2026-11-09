@@ -125,6 +125,10 @@ ol.dish li.side{background:transparent;padding:2px 12px;color:var(--muted)}
 .wk-state.idle{background:var(--sky-soft);color:var(--muted)}
 .wk-stats{display:flex;flex-wrap:wrap;gap:6px 16px;margin:14px 0 0;padding:10px 12px;background:var(--sky-soft);border-radius:12px;font-size:.9rem}
 .wk-stats b{font-weight:600}
+.maplink{align-self:flex-start;font:600 .85rem var(--body);color:var(--sky)}
+.next .what .endnote{font-size:.85rem;color:var(--muted)}
+.scout-bring{align-items:flex-start}
+.scout-bring ul{margin:4px 0 0;padding-left:18px;font:600 .95rem/1.45 var(--body)}
 .wk-extra{margin:10px 0 0;font-size:.85rem;color:var(--muted);font-style:italic}
 .wk-pauses{list-style:none;margin:10px 0 0;padding:0;font-size:.88rem;color:var(--muted);display:flex;flex-direction:column;gap:4px}
 .wk-apps{margin:14px 0 0;display:flex;flex-direction:column;gap:9px}
@@ -348,7 +352,7 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
     <div id="scout"><p class="status">Carico il calendario…</p></div>
   </section>
 </main>
-<p class="ver">Versione del 6 novembre, 10:00 · <button type="button" id="order-reset">ripristina l'ordine dei riquadri</button></p>
+<p class="ver">Versione del 9 novembre, 12:25 · <button type="button" id="order-reset">ripristina l'ordine dei riquadri</button></p>
 
 <script>
 // ---------- sezioni richiudibili (lo stato resta salvato su ogni telefono) ----------
@@ -772,8 +776,13 @@ const SCOUT_BACKUP = [
 ];
 // aggiunte a mano (es. orari e luoghi arrivati su WhatsApp): data -> { time, place }
 // se il foglio indica già un orario, vince quello scritto qui
+// campi possibili: time, place, placeUrl (link mappa), end (dove si conclude), bring (da portare), confirmed
 const SCOUT_EXTRA = {
-  "2026-11-07": { time: "15:00-17:30", place: "Palazzetto" }
+  "2026-11-07": { time: "15:00-17:30", place: "Palazzetto" },
+  "2026-11-14": { time: "15:00-17:30", place: "Skate park della Coop", placeUrl: "https://maps.app.goo.gl/cjLSJrdwuc9gVNaMA",
+                  end: "Si conclude alle 17:30 al Centro Bordignon",
+                  bring: ["Quaderno di Caccia con alcuni fogli", "Astuccio con un po' di cancelleria", "Gavettino o tazza di plastica", "K-way per sedersi per terra"] },
+  "2026-11-23": { time: "20:45", place: "Sala cinema", confirmed: true }
 };
 
 function parseCSV(text){
@@ -832,8 +841,12 @@ const isoKey = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")
 function info(e){
   const x = describe(e.t), extra = SCOUT_EXTRA[isoKey(e.d)];
   if (extra) {
-    if (extra.time) x.time = extra.time.replace(/\s*-\s*/, "–");
+    if (extra.time) x.time = /-/.test(extra.time) ? extra.time.replace(/\s*-\s*/, "–") : "ore " + extra.time;
     if (extra.place) x.place = extra.place;
+    if (extra.placeUrl) x.placeUrl = extra.placeUrl;
+    if (extra.end) x.end = extra.end;
+    if (extra.bring) x.bring = extra.bring;
+    if (extra.confirmed) x.tbc = false;
   }
   return x;
 }
@@ -866,7 +879,11 @@ function renderScout(events, live){
       ? `<span class="bigtime num"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>${md.time}</span>`
       : `<span class="bigtime missing">Orario non ancora indicato</span>`}${md.place
       ? `<span class="bigplace"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg>${esc(md.place)}</span>` : ""}</div>
+    ${md.placeUrl ? `<a class="maplink" href="${esc(md.placeUrl)}" target="_blank" rel="noopener">Apri sulla mappa</a>` : ""}
+    ${md.end ? `<span class="endnote">${esc(md.end)}</span>` : ""}
     ${md.tbc ? `<div class="chips"><span class="chip tbc">da confermare</span></div>` : ""}</div></div>`;
+  if (md.bring && md.bring.length)
+    html += `<div class="bring scout-bring">${BAG_ICON}<div><small>Da portare</small><ul>${md.bring.map(b => `<li>${esc(b)}</li>`).join("")}</ul></div></div>`;
 
   const rest = upcoming.filter(e => e !== main);
   const shown = scoutShowAll ? rest : rest.slice(0, 3);
