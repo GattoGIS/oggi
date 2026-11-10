@@ -175,6 +175,9 @@ ol.dish li.side{background:transparent;padding:2px 12px;color:var(--muted)}
 .sc-list li .x{flex:none;font:600 .75rem/1 var(--body);color:var(--sky)}
 .sc-list li.lunch{background:transparent;border:1px dashed var(--line);font-weight:400}
 .sc-list li.lunch .s{font-weight:400;color:var(--muted)}
+.sc-event{margin:12px 0 0;padding:12px 14px;border-radius:14px;border:2px solid var(--sky);display:flex;flex-direction:column;gap:3px}
+.sc-event strong{font:700 1.1rem/1.2 var(--display);color:var(--sky)}
+.sc-event span{font-size:.9rem;color:var(--muted)}
 .sc-wrap{position:relative;margin-top:12px}
 .sc-wrap .sc-list{margin-top:0}
 .sc-wrap.live{padding-left:24px}
@@ -352,7 +355,7 @@ ul.list li.off .txt{color:var(--muted);text-decoration:line-through;text-decorat
     <div id="scout"><p class="status">Carico il calendario…</p></div>
   </section>
 </main>
-<p class="ver">Versione del 9 novembre, 12:25 · <button type="button" id="order-reset">ripristina l'ordine dei riquadri</button></p>
+<p class="ver">Versione del 10 novembre, 17:10 · <button type="button" id="order-reset">ripristina l'ordine dei riquadri</button></p>
 
 <script>
 // ---------- sezioni richiudibili (lo stato resta salvato su ogni telefono) ----------
@@ -573,6 +576,8 @@ function renderElem(){
   const rel = eSelected.getTime() === today.getTime() ? "Oggi" : eSelected.getTime() === addDays(today, 1).getTime() ? "Domani" : "";
   const title = (rel ? rel + ", " : "") + longDate(eSelected).replace(/^\w/, c => rel ? c.toLowerCase() : c);
   let html = `<p class="when">${title}<span class="week">${wi + 1}ª settimana</span></p><ol class="dish">`;
+  const eEv = SCHOOL_EVENTS[isoKey(eSelected)];
+  if (eEv && eEv.packedLunch) html = html.replace('<ol class="dish">', `<p class="note">${esc(eEv.title)}: pranzo al sacco da casa, la mensa non c'è.</p><ol class="dish" style="opacity:.45">`);
   elemDay(eSelected).forEach((it, i) => { html += `<li${i >= 3 ? ' class="side"' : ""}>${esc(it)}</li>`; });
   html += `</ol>`;
   if (eSelected < ELEM_START || eSelected > ELEM_END) html += `<p class="note">Fuori dal periodo del menù autunno-inverno (5 ottobre – 19 febbraio): quando arriva il menù primaverile va aggiornato.</p>`;
@@ -601,6 +606,15 @@ const SCHOOL = [
 const SCHOOL_BRING = {
   2: [{ item: "Flauto", subject: "Musica" }],
   3: [{ item: "Tuta", subject: "Educazione fisica" }]
+};
+// avvisi della scuola per una data precisa: uscite, cose in più da portare, pranzo al sacco
+const SCHOOL_EVENTS = {
+  "2026-11-11": {
+    title: "Uscita a Villa Bolasco",
+    note: "Due ore con \"Science for all\" (Università di Padova). Si fa anche se piove. Zaino regolare come sempre; il materiale di matematica e inglese è già a scuola.",
+    bring: ["Zainetto con pranzo al sacco"],
+    packedLunch: true      // niente mensa: si mangia in classe al rientro
+  }
 };
 // orari dei 7 spazi (8 confini): 4 ore al mattino, mensa, 2 ore al pomeriggio — DA VERIFICARE con la scuola
 const SCHOOL_TIMES = ["08:00","09:00","10:00","11:00","12:00","14:00","15:00","16:00"];
@@ -655,8 +669,11 @@ function renderSchool(){
   });
   const isDefault = schoolSel === (schoolDefault.getDay() + 6) % 7;
   const rel = isDefault ? (schoolDefault.getTime() === today.getTime() ? "Oggi, " : schoolDefault.getTime() === addDays(today,1).getTime() ? "Domani, " : "") : "";
-  const bring = SCHOOL_BRING[schoolSel] || [];
+  const selDate = addDays(mondayOf(schoolDefault), schoolSel);
+  const ev = SCHOOL_EVENTS[isoKey(selDate)];
+  const bring = [...(SCHOOL_BRING[schoolSel] || []), ...((ev && ev.bring) || []).map(item => ({ item }))];
   let html = `<p class="when">${rel}${rel ? DAYS_LONG[schoolSel + 1].toLowerCase() : DAYS_LONG[schoolSel + 1]}</p>`;
+  if (ev) html += `<div class="sc-event"><strong>${esc(ev.title)}</strong>${ev.note ? `<span>${esc(ev.note)}</span>` : ""}</div>`;
   if (bring.length) html += `<div class="bring">${BAG_ICON}<div><small>Da portare</small><strong>${bring.map(b => esc(b.item)).join(", ")}</strong></div></div>`;
   // "in diretta" solo se si guarda il giorno di oggi ed è un giorno di scuola
   const live = today.getDay() >= 1 && today.getDay() <= 5 && (today.getDay() + 6) % 7 === schoolSel &&
@@ -668,8 +685,8 @@ function renderSchool(){
     const tag = bring.find(x => x.subject === b.s);
     const st = toMin(b.start), en = toMin(b.end);
     const cls = [lunch ? "lunch" : "", live && en <= nowMin ? "done" : "", live && st <= nowMin && nowMin < en ? "current" : ""].join(" ").trim();
-    const dayDate = addDays(mondayOf(schoolDefault), schoolSel);
-    const hint = lunch ? `<span class="menu-hint">${esc(elemDay(dayDate).slice(0, 2).join(" · "))}</span>` : "";
+    const hint = !lunch ? "" : ev && ev.packedLunch ? `<span class="menu-hint">Pranzo al sacco in classe, niente mensa</span>`
+      : `<span class="menu-hint">${esc(elemDay(selDate).slice(0, 2).join(" · "))}</span>`;
     html += `<li class="${cls}" data-start="${st}" data-end="${en}"><span class="h num">${b.start}</span><span class="s">${esc(b.s)}${hint}</span>${tag ? `<span class="bring-tag">${esc(tag.item)}</span>` : ""}${b.n > 1 ? `<span class="x">${b.n} ore</span>` : ""}</li>`;
   });
   html += `</ul></div>`;
@@ -678,8 +695,9 @@ function renderSchool(){
 
   const sd = SCHOOL[(schoolDefault.getDay() + 6) % 7];
   const label = schoolDefault.getTime() === today.getTime() ? "Oggi" : schoolDefault.getTime() === addDays(today,1).getTime() ? "Domani" : DAYS[(schoolDefault.getDay() + 6) % 7];
-  const sb = SCHOOL_BRING[(schoolDefault.getDay() + 6) % 7] || [];
-  setSummary("c-h", `${label}: ` + (sb.length ? `portare ${sb.map(b => b.item.toLowerCase()).join(", ")} · ` : "") +
+  const dev = SCHOOL_EVENTS[isoKey(schoolDefault)];
+  const sb = [...(SCHOOL_BRING[(schoolDefault.getDay() + 6) % 7] || []).map(b => b.item), ...((dev && dev.bring) || [])];
+  setSummary("c-h", `${label}: ` + (dev ? `${dev.title} · ` : "") + (sb.length ? `portare ${sb.map(b => b.toLowerCase()).join(", ")} · ` : "") +
     [...new Set(sd.filter(s => !s.startsWith("Mensa")))].join(", "));
 }
 
